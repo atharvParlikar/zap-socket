@@ -1,19 +1,11 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { generateId } from "./utils";
+import type { EventMap } from "./events";
+import { z } from 'zod';
 
 interface ZapServerConstructorT {
   port: number;
 }
-
-type EventMap = {
-  [event: string]: {
-    input: any;
-    process: (args: { input: any }) => any;
-  };
-};
-
-// 1. connect to websocket first
-// 2. add events later
 
 export class ZapServer {
   private wss: WebSocketServer;
@@ -36,7 +28,8 @@ export class ZapServer {
         for (const [event, { process }] of Object.entries(this.events)) {
           const parsedMessage = JSON.parse(message.toString());
           if (parsedMessage["type"] === event) {
-            process({ input: null });
+            const { input } = parsedMessage
+            process(input);
           }
         }
       });
@@ -67,17 +60,3 @@ export class ZapServer {
 export const createZapServer = ({ port }: { port: number }) => {
   return new ZapServer({ port });
 }
-
-export const createEvents = <T extends EventMap>(events: T) => {
-  return events;
-}
-
-const server = createZapServer({ port: 8000 });
-const events = createEvents({
-  ping: {
-    input: {},
-    process: ({ }) => console.log("Got a ping")
-  }
-});
-
-server.attachEvents(events);
