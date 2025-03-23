@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { EventMap } from "./events";
 
 // actual socket payload := {
 //   type: messageType,
@@ -13,21 +14,25 @@ interface CreateClientArgs {
   url: string
 }
 
-export const createClient = <TEvents extends Record<string, { input: any; process: any }>>({ url }: CreateClientArgs) => {
-  return new Proxy({} as {
+export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientArgs) => {
+  const client = {} as {
     [K in keyof TEvents]: {
-      send: TEvents[K]["input"] extends z.ZodType<any, any, any>
-      ? (input: z.infer<TEvents[K]["input"]>) => ReturnType<TEvents[K]["process"]>
-      : () => ReturnType<TEvents[K]["process"]>;
+      send: TEvents[K]["input"] extends z.ZodVoid
+      ? () => Promise<ReturnType<TEvents[K]["process"]>>
+      : (input: z.infer<TEvents[K]["input"]>) => Promise<ReturnType<TEvents[K]["process"]>>;
     }
-  }, {
-    get(_, prop: string) {
-      return {
-        send: (input: any) => {
-          console.log("sending message: ", input)
-        }
-      }
-    }
-  });
-}
+  };
 
+  // Create methods for each event
+  for (const eventName in {} as TEvents) {
+    client[eventName] = {
+      send: ((input?: any) => {
+        console.log(`sending ${eventName} message:`, input);
+        // Here you would handle the actual API call
+        return Promise.resolve(undefined); // Placeholder return
+      }) as any
+    };
+  }
+
+  return client;
+};

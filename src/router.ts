@@ -1,36 +1,15 @@
-import { z } from 'zod';
+import { z } from "zod";
+import { createZapEvent } from "./events";
+import { createZapClient } from "./client";
 
-const router = {
-  getUser: {
-    input: z.object({ id: z.number() }),
-    resolve: (input: { id: number }) => {
-      return { id: input.id, name: "Atharv" };
-    },
-  },
-};
-
-// Infer the type of the router
-type RouterType = typeof router;
-
-function createClient<TRouter extends Record<string, { input: any; resolve: any }>>() {
-  return new Proxy({} as {
-    [K in keyof TRouter]: {
-      query: (input: z.infer<TRouter[K]["input"]>) => ReturnType<TRouter[K]["resolve"]>;
-    };
-  }, {
-    get(_, prop: string) {
-      return {
-        query: (input: any) => {
-          console.log("Fake call with", input);
-        },
-      };
-    },
-  });
+const events = {
+  message: createZapEvent({
+    input: z.string(),
+    process: (input) => input.toUpperCase()
+  }),
+  ping: createZapEvent({
+    process: () => "pong",
+  })
 }
 
-// Pass only the type, NOT the actual router
-const client = createClient<RouterType>();
-
-client.getUser.query({
-  id: 12
-})
+const zap = createZapClient<typeof events>({ url: "" });
