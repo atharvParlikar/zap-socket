@@ -1,25 +1,13 @@
-import { z } from 'zod';
-const router = {
-    getUser: {
-        input: z.object({ id: z.number() }),
-        resolve: (input) => {
-            return { id: input.id, name: "Atharv" };
-        },
-    },
+import { z } from "zod";
+import { createZapEvent } from "./events";
+import { createZapClient } from "./client";
+const events = {
+    message: createZapEvent({
+        input: z.string(),
+        process: (input) => input.toUpperCase()
+    }),
+    ping: createZapEvent({
+        process: () => "pong",
+    })
 };
-function createClient() {
-    return new Proxy({}, {
-        get(_, prop) {
-            return {
-                query: (input) => {
-                    console.log("Fake call with", input);
-                },
-            };
-        },
-    });
-}
-// Pass only the type, NOT the actual router
-const client = createClient();
-client.getUser.query({
-    id: 12
-});
+const zap = createZapClient({ url: "" });
