@@ -24,6 +24,13 @@ export class ZapServer {
       this.idToWs.set(clientId, ws);
 
       ws.on("message", (message) => {
+        if (!this.wsToId.get(ws)) {
+          const id = generateId();
+          this.wsToId.set(ws, id);
+          this.idToWs.set(id, ws);
+          ws.send("ID " + id);
+        }
+
         for (const [event, { process }] of Object.entries(this.events)) {
           const parsedMessage = JSON.parse(message.toString());
           if (parsedMessage["type"] === event) {

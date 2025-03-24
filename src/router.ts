@@ -8,7 +8,7 @@ const events = {
     process: (input) => input.toUpperCase()
   }),
   ping: createZapEvent({
-    process: () => "pong",
+    process: () => 12,
   })
 }
 

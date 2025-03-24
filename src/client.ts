@@ -14,25 +14,55 @@ interface CreateClientArgs {
   url: string
 }
 
-export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientArgs) => {
-  const client = {} as {
-    [K in keyof TEvents]: {
-      send: TEvents[K]["input"] extends z.ZodVoid
-      ? () => Promise<ReturnType<TEvents[K]["process"]>>
-      : (input: z.infer<TEvents[K]["input"]>) => Promise<ReturnType<TEvents[K]["process"]>>;
-    }
-  };
+export class ZapClient {
+  private url: string;
+  public connection: WebSocket;
+  public id: string | null = null;
+  public onConnect: (() => void) | null = null;
 
-  // Create methods for each event
+  constructor(url: string) {
+    this.url = url;
+    this.connection = new WebSocket(url);
+
+    this.connection.onopen = () => {
+      this.connection.send("OPEN");
+      this.connection.onmessage = (event) => {
+        if (event.data.startsWith("ID ")) {
+          this.id = event.data.substring(3);
+          this.connection.onmessage = null;
+          if (this.onConnect) {
+            this.onConnect();
+          }
+        }
+      };
+    };
+  }
+}
+
+type EventHandler<TInput extends z.ZodTypeAny, TOutput> = {
+  send: TInput extends z.ZodVoid
+  ? () => Promise<TOutput>
+  : (input: z.infer<TInput>) => Promise<TOutput>;
+  listen: (callback: (data: TOutput) => void) => void;
+}
+
+type ZapClientWithEvents<T extends EventMap> = ZapClient & {
+  [K in keyof T]: EventHandler<T[K]["input"], ReturnType<T[K]["process"]>>
+}
+
+export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientArgs): ZapClientWithEvents<TEvents> => {
+  const client = new ZapClient(url);
+
   for (const eventName in {} as TEvents) {
-    client[eventName] = {
+    (client as any)[eventName] = {
       send: ((input?: any) => {
-        console.log(`sending ${eventName} message:`, input);
-        // Here you would handle the actual API call
-        return Promise.resolve(undefined); // Placeholder return
-      }) as any
+        return Promise.resolve(undefined);
+      }),
+      listen: ((callback: any) => {
+      })
     };
   }
 
-  return client;
+  return client as ZapClientWithEvents<TEvents>;
 };
+
