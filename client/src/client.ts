@@ -29,6 +29,7 @@ export class ZapClient {
   public onconnect: (() => void) | null = null;
   private _connected: boolean = false; // here connected means id setup is complete; not connected in the treditional sense.
   private requestMap = new Map<string, { resolve: (value: unknown) => void, reject: (reason: any) => void }>();
+  private listen: Map<string, (callback: any) => void> = new Map();
 
   constructor(url: string) {
     this._url = url;
@@ -43,13 +44,20 @@ export class ZapClient {
       this.ws.onmessage = (e) => {
         const parsedMsg = safeJsonParse(e.data.toString());
         if (!parsedMsg) return;
-        const { requestId, data } = parsedMsg;
+        const { event, requestId, data } = parsedMsg;
 
         const requestResolutionObj = this.requestMap.get(requestId);
         if (!requestResolutionObj) return;
         const { resolve } = requestResolutionObj;
         resolve(data);
         this.requestMap.delete(requestId);
+
+        this.listen.keys().forEach((eventName) => {
+          if (event === eventName) {
+            const callback = this.listen.get(event)!;
+            callback(event);
+          }
+        })
       }
     };
   }
@@ -100,6 +108,14 @@ export class ZapClient {
       this.requestMap.set(requestId, { resolve, reject });
     });
   }
+
+  public addEventListener(event: string, callback: (arg: any) => void) {
+    this.listen.set(event, callback);
+  }
+
+  public removeEventListener(event: string) {
+    this.listen.delete(event);
+  }
 }
 
 type EventHandler<TInput extends z.ZodTypeAny, TOutput> = {
@@ -107,6 +123,7 @@ type EventHandler<TInput extends z.ZodTypeAny, TOutput> = {
   ? () => Promise<TOutput>
   : (input: z.infer<TInput>) => Promise<TOutput>;
   listen: (callback: (data: TOutput) => void) => void;
+  unlisten: () => void;
 }
 
 export type ZapClientWithEvents<T extends EventMap> = ZapClient & {
@@ -123,13 +140,17 @@ export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientA
       if (getAllPropsAndMethods(client).includes(prop)) {
         return Reflect.get(target, prop, reciever);
       }
-      // here everything we have is a event
+      // here any prop we have is a valid event
       const eventName = prop;
       return {
         send: (input: any) => {
           return client.sendMessageRaw(eventName, input);
         },
-        listen: (arg: (input: any) => void) => {
+        listen: (callback: (input: any) => void) => {
+          client.addEventListener(eventName, callback);
+        },
+        unlisten: () => {
+          client.removeEventListener(eventName);
         }
       }
     }
