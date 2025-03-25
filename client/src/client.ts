@@ -23,17 +23,15 @@ interface Packet {
 }
 
 export class ZapClient {
-  private url: string;
+  private _url: string;
   public ws: WebSocket;
   private _id: string = "";
   public onconnect: (() => void) | null = null;
   private _connected: boolean = false; // here connected means id setup is complete; not connected in the treditional sense.
   private requestMap = new Map<string, { resolve: (value: unknown) => void, reject: (reason: any) => void }>();
-  private events: string[];
 
-  constructor(url: string, events: string[]) {
-    this.url = url;
-    this.events = events;
+  constructor(url: string) {
+    this._url = url;
     this.ws = new WebSocket(url);
 
     this.ws.onopen = async () => {
@@ -46,11 +44,7 @@ export class ZapClient {
         const parsedMsg = safeJsonParse(e.data.toString());
         console.log(parsedMsg);
         if (!parsedMsg) return;
-        const { event, requestId, data } = parsedMsg;
-
-        console.log(this.events);
-
-        if (!this.events.includes(event)) return;
+        const { requestId, data } = parsedMsg;
 
         const requestResolutionObj = this.requestMap.get(requestId);
         if (!requestResolutionObj) return;
@@ -66,6 +60,10 @@ export class ZapClient {
 
   get id(): string {
     return this._id;
+  }
+
+  get url(): string {
+    return this._url;
   }
 
   private initializeId(): Promise<null> {
@@ -99,7 +97,7 @@ export class ZapClient {
     this.ws.send(serializedPacket);
 
     return new Promise((resolve, reject) => {
-      this.requestMap.set(event, { resolve, reject });
+      this.requestMap.set(requestId, { resolve, reject });
     });
   }
 }
@@ -114,23 +112,30 @@ type EventHandler<TInput extends z.ZodTypeAny, TOutput> = {
 export type ZapClientWithEvents<T extends EventMap> = ZapClient & {
   [K in keyof T]: EventHandler<T[K]["input"], ReturnType<T[K]["process"]>>
 }
+const getAllPropsAndMethods = (obj: any) => [...new Set([...Object.getOwnPropertyNames(obj), ...Object.getOwnPropertyNames(Object.getPrototypeOf(obj))])];
 
 export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientArgs): ZapClientWithEvents<TEvents> => {
-  const events: string[] = [];
+  const client = new ZapClient(url);
 
-  const client = new ZapClient(url, events);
-
-  for (const eventName in {} as TEvents) {
-    console.log("eventName: ", eventName);
-    (client as any)[eventName] = {
-      send: ((input?: any) => {
-        return client.sendMessageRaw(eventName, input);
-      }),
-      listen: ((callback: any) => {
-      })
-    };
+  const proxyHandler: ProxyHandler<ZapClient> = {
+    get(target, prop: string, reciever) {
+      if (getAllPropsAndMethods(client).includes(prop)) {
+        return Reflect.get(target, prop, reciever);
+      }
+      // here everything we have is a event
+      const eventName = prop;
+      return {
+        send: (input: any) => {
+          return client.sendMessageRaw(eventName, input);
+        },
+        listen: (arg: any) => {
+        }
+      }
+    }
   }
 
-  return client as ZapClientWithEvents<TEvents>;
+  const clientProxy = new Proxy<ZapClientWithEvents<TEvents>>(client as ZapClientWithEvents<TEvents>, proxyHandler);
+
+  return clientProxy;
 };
 
