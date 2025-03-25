@@ -42,7 +42,6 @@ export class ZapClient {
 
       this.ws.onmessage = (e) => {
         const parsedMsg = safeJsonParse(e.data.toString());
-        console.log(parsedMsg);
         if (!parsedMsg) return;
         const { requestId, data } = parsedMsg;
 
@@ -50,6 +49,7 @@ export class ZapClient {
         if (!requestResolutionObj) return;
         const { resolve } = requestResolutionObj;
         resolve(data);
+        this.requestMap.delete(requestId);
       }
     };
   }
@@ -112,6 +112,7 @@ type EventHandler<TInput extends z.ZodTypeAny, TOutput> = {
 export type ZapClientWithEvents<T extends EventMap> = ZapClient & {
   [K in keyof T]: EventHandler<T[K]["input"], ReturnType<T[K]["process"]>>
 }
+
 const getAllPropsAndMethods = (obj: any) => [...new Set([...Object.getOwnPropertyNames(obj), ...Object.getOwnPropertyNames(Object.getPrototypeOf(obj))])];
 
 export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientArgs): ZapClientWithEvents<TEvents> => {
@@ -128,7 +129,7 @@ export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientA
         send: (input: any) => {
           return client.sendMessageRaw(eventName, input);
         },
-        listen: (arg: any) => {
+        listen: (arg: (input: any) => void) => {
         }
       }
     }
