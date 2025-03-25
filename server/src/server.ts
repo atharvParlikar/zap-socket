@@ -45,6 +45,8 @@ export class ZapServer {
             const { data, requestId } = parsedMessage
             const result = process(data);
             const serialized = serialize({ requestId, event, data: result });
+            //  TODO: throw some nice error: only return stuff that is serializable
+            // i.e. primary data types and objects
             if (!serialized) return;
             ws.send(serialized);
           }
