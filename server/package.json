@@ -1,7 +1,7 @@
 {
-  "name": "zap-socket",
-  "version": "0.0.3",
-  "description": "A fully typesafe tRPC-style WebSocket library with Zod validation, req-res model, and native subscriptions.",
+  "name": "@zap-socket/server",
+  "version": "0.0.1",
+  "description": "A fully typesafe tRPC-inspired WebSocket library with Zod validation, req-res model, and native subscriptions.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "repository": "https://github.com/atharvparlikar/zap-socket",

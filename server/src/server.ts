@@ -1,5 +1,5 @@
 import { WebSocketServer, WebSocket } from "ws";
-import { generateId } from "./utils";
+import { serialize, deserialize, generateId } from "./utils";
 import type { EventMap } from "./events";
 
 interface ZapServerConstructorT {
@@ -18,24 +18,35 @@ export class ZapServer {
     this.idToWs = new Map();
 
     this.wss.on("connection", (ws) => {
-      const clientId = generateId();
-      console.log(`client ${clientId} connected`);
-      this.wsToId.set(ws, clientId);
-      this.idToWs.set(clientId, ws);
-
       ws.on("message", (message) => {
+        const parsedMessage = deserialize(message.toString());
+        console.log("got message: ", parsedMessage);
+
         if (!this.wsToId.get(ws)) {
           const id = generateId();
           this.wsToId.set(ws, id);
           this.idToWs.set(id, ws);
           ws.send("ID " + id);
+          console.log(`client ${id} connected.`);
+          return;
         }
 
+
         for (const [event, { process }] of Object.entries(this.events)) {
-          const parsedMessage = JSON.parse(message.toString());
-          if (parsedMessage["type"] === event) {
-            const { input } = parsedMessage
-            process(input);
+          const parsedMessage = deserialize<{
+            requestId: string;
+            event: string;
+            data: any;
+          }>(message.toString());
+          if (
+            parsedMessage &&
+            parsedMessage["event"] === event
+          ) {
+            const { data, requestId } = parsedMessage
+            const result = process(data);
+            const serialized = serialize({ requestId, event, data: result });
+            if (!serialized) return;
+            ws.send(serialized);
           }
         }
       });
@@ -45,7 +56,7 @@ export class ZapServer {
       });
 
       ws.on("error", (err) => {
-        console.error(`WebSocket error for ${clientId}:`, err);
+        console.error(`WebSocket error for ${this.wsToId.get(ws)}:`, err);
       });
     });
   }

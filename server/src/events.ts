@@ -14,7 +14,7 @@ export type ZapEvent<T extends EventInput, R = any> = T extends z.ZodTypeAny
 
 export type EventMap = Record<string, ZapEvent<any, any>>;
 
-export const createZapEvent = <T extends EventInput, R>(
+export const zapEvent = <T extends EventInput, R>(
   eventObj: T extends z.ZodTypeAny
     ? {
       input: T;
