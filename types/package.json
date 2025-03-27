@@ -1,0 +1,26 @@
+{
+  "name": "@zap-socket/client",
+  "version": "0.0.1",
+  "description": "types for @zap-socket/server and @zap-socket/client",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": "https://github.com/atharvparlikar/zap-socket",
+  "author": "Atharv Parlikar",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.0",
+    "eslint": "^9.22.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.2",
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  }
+}

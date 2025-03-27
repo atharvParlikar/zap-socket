@@ -1,7 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { serialize, deserialize, generateId } from "./utils";
 import type { EventMap, ZapEvent, ZapServerEvent } from "./events";
-import { z } from "zod";
 
 interface ZapServerConstructorT {
   port: number;
@@ -54,7 +53,7 @@ export class ZapServer<T extends EventMap> {
             parsedMessage["event"] === event
           ) {
             const { data, requestId } = parsedMessage
-            const result = process(data);
+            const result = process(data, { server: this });
             const serialized = serialize({ requestId, event, data: result });
             //  TODO: throw some nice error: only return stuff that is serializable
             // i.e. primary data types and objects
@@ -117,6 +116,5 @@ export class ZapServer<T extends EventMap> {
 
 export const createZapServer = <T extends EventMap>({ port, events }: ZapServerConstructorT, callback?: () => void) => {
   const server = new ZapServer<T>({ port, events }, callback);
-
   return server;
 }
