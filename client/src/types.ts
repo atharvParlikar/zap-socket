@@ -12,4 +12,8 @@ export type ZapEvent<T extends EventInput, R = any> = T extends z.ZodTypeAny
     process: () => R;
   };
 
-export type EventMap = Record<string, ZapEvent<any, any>>;
+export type ZapServerEvent<T extends z.ZodTypeAny> = {
+  data: T;
+}
+
+export type EventMap = Record<string, ZapEvent<any, any> | ZapServerEvent<any>>;

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { EventMap } from "./types";
-import { generateId, serialize, deserialize, safeJsonParse } from "./utils";
+import { EventMap, ZapEvent, ZapServerEvent } from "./types";
+import { generateId, serialize, safeJsonParse } from "./utils";
 
 // actual socket payload := {
 //   requestId: 16 character id,
@@ -43,6 +43,8 @@ export class ZapClient {
 
       this.ws.onmessage = (e) => {
         const parsedMsg = safeJsonParse(e.data.toString());
+        console.log("parsedMsg: ");
+        console.log(parsedMsg);
         if (!parsedMsg) return;
         const { event, requestId, data } = parsedMsg;
 
@@ -126,13 +128,24 @@ type EventHandler<TInput extends z.ZodTypeAny, TOutput> = {
   unlisten: () => void;
 }
 
-export type ZapClientWithEvents<T extends EventMap> = ZapClient & {
-  [K in keyof T]: EventHandler<T[K]["input"], ReturnType<T[K]["process"]>>
+type ServerEventHandler<T extends z.ZodTypeAny> = {
+  listen: (callback: (data: T) => void) => void;
+  unlisten: () => void;
 }
+
+export type ZapClientWithEvents<T extends EventMap> = ZapClient & {
+  [K in keyof T]:
+  T[K] extends ZapServerEvent<any>
+  ? ServerEventHandler<T[K]["data"]>
+  : T[K] extends ZapEvent<any, any>
+  ? EventHandler<T[K]["input"], ReturnType<T[K]["process"]>>
+  : never;
+};
 
 const getAllPropsAndMethods = (obj: any) => [...new Set([...Object.getOwnPropertyNames(obj), ...Object.getOwnPropertyNames(Object.getPrototypeOf(obj))])];
 
 export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientArgs): ZapClientWithEvents<TEvents> => {
+  console.log("createZapClient called");
   const client = new ZapClient(url);
 
   const proxyHandler: ProxyHandler<ZapClient> = {

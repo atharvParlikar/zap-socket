@@ -1,27 +1,35 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { serialize, deserialize, generateId } from "./utils";
-import type { EventMap } from "./events";
+import type { EventMap, ZapEvent, ZapServerEvent } from "./events";
+import { z } from "zod";
 
 interface ZapServerConstructorT {
   port: number;
+  events?: EventMap
 }
 
-export class ZapServer {
+const isZapEvent = (event: any): event is ZapEvent<any, any> => {
+  return "process" in event;
+}
+
+export class ZapServer<T extends EventMap> {
   private wss: WebSocketServer;
   private wsToId: Map<WebSocket, string>;
   private idToWs: Map<string, WebSocket>;
-  private events: EventMap = {};
+  private _events: T = {} as T;
 
-  constructor({ port }: ZapServerConstructorT) {
+  constructor({ port, events = {} as T }: ZapServerConstructorT, callback?: () => void) {
     this.wss = new WebSocketServer({ port });
     this.wsToId = new Map();
     this.idToWs = new Map();
+    this._events = events as T;
+
+    this.wss.on("listening", () => {
+      if (callback) callback();
+    })
 
     this.wss.on("connection", (ws) => {
       ws.on("message", (message) => {
-        const parsedMessage = deserialize(message.toString());
-        console.log("got message: ", parsedMessage);
-
         if (!this.wsToId.get(ws)) {
           const id = generateId();
           this.wsToId.set(ws, id);
@@ -32,7 +40,10 @@ export class ZapServer {
         }
 
 
-        for (const [event, { process }] of Object.entries(this.events)) {
+        for (const [event, eventObj] of Object.entries(this._events)) {
+          if (!isZapEvent(eventObj)) continue; // skip server events
+
+          const { process } = eventObj;
           const parsedMessage = deserialize<{
             requestId: string;
             event: string;
@@ -71,11 +82,41 @@ export class ZapServer {
     }
   }
 
-  public attachEvents<T extends EventMap>(events: T) {
-    this.events = events;
+  public sendMessageRaw(clientId: string, data: any) {
+    const ws = this.idToWs.get(clientId);
+    //  TODO: throw a nice error
+    if (!ws) return;
+    const serializedData = serialize(data);
+    //  TODO: throw a nice error
+    if (!serializedData) return;
+    ws.send(serializedData);
+  }
+
+  get event() {
+    return Object.fromEntries(Object.keys(this._events).map((eventName) => {
+      //  HACK: use a better method to determine the type of event.
+      if ("data" in this._events[eventName]) {
+        // event is server event
+        return [eventName, {
+          send: (clientId: string, data: any) => {
+            const packet = {
+              event: eventName,
+              data
+            }
+            this.sendMessageRaw(clientId, packet);
+          }
+        }]
+      }
+      return null;
+    }).filter(entry => entry !== null)) as { [K in keyof T as T[K] extends ZapServerEvent<any> ? K : never]: {
+      send: (data: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : never)) => void;
+    }
+      }
   }
 }
 
-export const createZapServer = ({ port }: { port: number }) => {
-  return new ZapServer({ port });
+export const createZapServer = <T extends EventMap>({ port, events }: ZapServerConstructorT, callback?: () => void) => {
+  const server = new ZapServer<T>({ port, events }, callback);
+
+  return server;
 }
