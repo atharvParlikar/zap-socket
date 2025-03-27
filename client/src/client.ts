@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EventMap, ZapEvent, ZapServerEvent } from "./types";
+import type { EventMap, ZapEvent, ZapServerEvent } from "@zap-socket/types";
 import { generateId, serialize, safeJsonParse } from "./utils";
 
 // actual socket payload := {

@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { serialize, deserialize, generateId } from "./utils";
-import type { EventMap, ZapEvent, ZapServerEvent } from "./events";
+import type { EventMap, ZapEvent, ZapServerEvent } from "@zap-socket/types";
 
 interface ZapServerConstructorT {
   port: number;

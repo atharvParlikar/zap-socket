@@ -1,5 +1,5 @@
 {
-  "name": "@zap-socket/client",
+  "name": "@zap-socket/types",
   "version": "0.0.1",
   "description": "types for @zap-socket/server and @zap-socket/client",
   "main": "dist/index.js",
@@ -18,7 +18,7 @@
     "@types/ws": "^8.18.0",
     "eslint": "^9.22.0",
     "tsup": "^8.4.0",
-    "typescript": "^5.8.2",
+    "typescript": "^5.8.2"
   },
   "dependencies": {
     "zod": "^3.24.2"
