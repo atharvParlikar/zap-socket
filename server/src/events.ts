@@ -1,13 +1,15 @@
 import { z } from "zod";
-import type { EventInput, Context, ZapEvent, ZapServerEvent } from "@zap-socket/types";
+import type { EventInput, Context, ZapEvent, ZapServerEvent, MiddlewareType } from "@zap-socket/types";
 
 export const zapEvent = <T extends EventInput, R>(
   eventObj: T extends z.ZodTypeAny
     ? {
       input: T;
+      middleware?: MiddlewareType[];
       process: (input: z.infer<T>, ctx: Context) => R;
     }
     : {
+      middleware?: MiddlewareType[];
       process: (ctx: Context) => R;
     }
 ): ZapEvent<T, R> => {

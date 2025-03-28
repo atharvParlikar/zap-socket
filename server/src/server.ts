@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { serialize, deserialize, generateId } from "./utils";
-import type { EventMap, ZapEvent, ZapServerEvent } from "@zap-socket/types";
+import type { EventMap, MiddlewareMetadata, MiddlewareType, MiddlwareContext, MiddlwareMsg, ZapEvent, ZapServerEvent } from "@zap-socket/types";
 
 interface ZapServerConstructorT {
   port: number;
@@ -27,7 +27,7 @@ export class ZapServer<T extends EventMap> {
       if (callback) callback();
     })
 
-    this.wss.on("connection", (ws) => {
+    this.wss.on("connection", (ws, req) => {
       ws.on("message", (message) => {
         if (!this.wsToId.get(ws)) {
           const id = generateId();
@@ -38,11 +38,12 @@ export class ZapServer<T extends EventMap> {
           return;
         }
 
+        const clientId = this.wsToId.get(ws)!;
 
         for (const [event, eventObj] of Object.entries(this._events)) {
           if (!isZapEvent(eventObj)) continue; // skip server events
 
-          const { process } = eventObj;
+          const { process, middleware } = eventObj;
           const parsedMessage = deserialize<{
             requestId: string;
             event: string;
@@ -53,12 +54,34 @@ export class ZapServer<T extends EventMap> {
             parsedMessage["event"] === event
           ) {
             const { data, requestId } = parsedMessage
-            const result = process(data, { server: this });
+            // Do middleware checks
+            const ctx: MiddlwareContext = {};
+            if (middleware) {
+              middleware.forEach((m) => {
+                const metadata: MiddlewareMetadata = {
+                  id: clientId,
+                  ip: req.socket.remoteAddress!,
+                  timestamp: Date.now(),
+                  size: message.toString().length
+                }
+                const msg: MiddlwareMsg = {
+                  event,
+                  data: parsedMessage,
+                  metadata
+                }
+                if (!m(ctx, msg)) {
+                  return;
+                }
+              });
+            }
+            // By this point all the middlewares allow to pass through
+            const result = process(data, { server: this, id: this.wsToId.get(ws)!, buffer: ctx });
             const serialized = serialize({ requestId, event, data: result });
             //  TODO: throw some nice error: only return stuff that is serializable
             // i.e. primary data types and objects
             if (!serialized) return;
             ws.send(serialized);
+            return; // finally return to avoid looping through rest of events unneccessarily
           }
         }
       });
@@ -97,7 +120,7 @@ export class ZapServer<T extends EventMap> {
       if ("data" in this._events[eventName]) {
         // event is server event
         return [eventName, {
-          send: (clientId: string, data: any) => {
+          send: (clientId: string, data?: any) => {
             const packet = {
               event: eventName,
               data
@@ -108,7 +131,7 @@ export class ZapServer<T extends EventMap> {
       }
       return null;
     }).filter(entry => entry !== null)) as { [K in keyof T as T[K] extends ZapServerEvent<any> ? K : never]: {
-      send: (data: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : never)) => void;
+      send: (clientId: string, data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : never)) => void;
     }
       }
   }

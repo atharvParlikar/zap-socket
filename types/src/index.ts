@@ -4,24 +4,50 @@ export type ZapServerType<T extends EventMap> = {
   sendMessageRaw: (clientId: string, data: any) => void;
   event: {
     [K in keyof T as T[K] extends ZapServerEvent<any> ? K : never]: {
-      send: (data: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : never)) => void;
+      send: (clientId: string, data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : never)) => void;
     }
   };
 };
 
 export type Context = {
-  server: ZapServerType<any>; //  TODO: see if you can replace this any with EventMap type and if that has any dx advantage.
+  server: ZapServerType<any>;
+  id: string;
+  buffer: MiddlwareContext;
 }
+
+// Middleware types start
+
+export type MiddlwareContext = Record<string, any>;
+
+export type MiddlewareMetadata = {
+  id: string;               // Sender ID
+  ip: string;               // Client IP address
+  timestamp: number;        // Epoch time → when the msg was received
+  size: number;             // Size of the raw message in bytes
+  // protocol: "ws" | "wss";   // Whether it's WS or WSS (ignore for now)
+}
+
+export type MiddlwareMsg = {
+  event: string;
+  data: any;
+  metadata: MiddlewareMetadata;
+}
+
+export type MiddlewareType = (ctx: MiddlwareContext, msg: MiddlwareMsg) => boolean;
+
+// Middleware types end
 
 export type EventInput = z.ZodTypeAny | undefined;
 
 export type ZapEvent<T extends EventInput, R = any> = T extends z.ZodTypeAny
   ? {
     input: T;
+    middleware?: MiddlewareType[];
     process: (input: z.infer<T>, ctx: Context) => R;
   }
   : {
     input: z.ZodVoid;
+    middleware?: MiddlewareType[];
     process: (ctx: Context) => R;
   };
 
