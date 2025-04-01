@@ -12,7 +12,7 @@ const isZapEvent = (event: any): event is ZapEvent<any, any> => {
 }
 
 export class ZapServer<T extends EventMap> {
-  private wss: WebSocketServer;
+  public wss: WebSocketServer;
   private wsToId: Map<WebSocket, string>;
   private idToWs: Map<string, WebSocket>;
   private _events: T = {} as T;
@@ -114,6 +114,17 @@ export class ZapServer<T extends EventMap> {
     ws.send(serializedData);
   }
 
+  public broadcastRaw(data: any) {
+    const serializedData = serialize(data);
+    if (!serializedData) {
+      //  TODO: throw a nice error
+      return;
+    }
+    this.idToWs.forEach((ws) => {
+      ws.send(serializedData);
+    })
+  }
+
   get event() {
     return Object.fromEntries(Object.keys(this._events).map((eventName) => {
       //  HACK: use a better method to determine the type of event.
@@ -126,12 +137,20 @@ export class ZapServer<T extends EventMap> {
               data
             }
             this.sendMessageRaw(clientId, packet);
+          },
+          broadcast: (data?: any) => {
+            const packet = {
+              event: eventName,
+              data
+            }
+            this.broadcastRaw(packet);
           }
         }]
       }
       return null;
     }).filter(entry => entry !== null)) as { [K in keyof T as T[K] extends ZapServerEvent<any> ? K : never]: {
       send: (clientId: string, data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : never)) => void;
+      broadcast: (data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : never)) => void;
     }
       }
   }

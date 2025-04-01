@@ -134,12 +134,14 @@ type ServerEventHandler<T extends z.ZodTypeAny> = {
 }
 
 export type ZapClientWithEvents<T extends EventMap> = ZapClient & {
-  [K in keyof T]:
-  T[K] extends ZapServerEvent<any>
-  ? ServerEventHandler<T[K]["data"]>
-  : T[K] extends ZapEvent<any, any>
-  ? EventHandler<T[K]["input"], ReturnType<T[K]["process"]>>
-  : never;
+  events: {
+    [K in keyof T]:
+    T[K] extends ZapServerEvent<any>
+    ? ServerEventHandler<T[K]["data"]>
+    : T[K] extends ZapEvent<any, any>
+    ? EventHandler<T[K]["input"], ReturnType<T[K]["process"]>>
+    : unknown;
+  };
 };
 
 const getAllPropsAndMethods = (obj: any) => [...new Set([...Object.getOwnPropertyNames(obj), ...Object.getOwnPropertyNames(Object.getPrototypeOf(obj))])];
@@ -148,29 +150,32 @@ export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientA
   console.log("createZapClient called");
   const client = new ZapClient(url);
 
-  const proxyHandler: ProxyHandler<ZapClient> = {
-    get(target, prop: string, reciever) {
-      if (getAllPropsAndMethods(client).includes(prop)) {
-        return Reflect.get(target, prop, reciever);
+  const proxyHandler: ProxyHandler<ZapClientWithEvents<TEvents>> = {
+    get(target, prop: string, receiver) {
+      if (prop === "events") {
+        return new Proxy({} as any, {
+          get(eventsTarget, eventName: string, eventsReceiver) {
+            return {
+              send: (input: any) => {
+                return client.sendMessageRaw(eventName, input);
+              },
+              listen: (callback: (input: any) => void) => {
+                client.addEventListener(eventName, callback);
+              },
+              unlisten: () => {
+                client.removeEventListener(eventName);
+              }
+            };
+          }
+        });
       }
-      // here any prop we have is a valid event
-      const eventName = prop;
-      return {
-        send: (input: any) => {
-          return client.sendMessageRaw(eventName, input);
-        },
-        listen: (callback: (input: any) => void) => {
-          client.addEventListener(eventName, callback);
-        },
-        unlisten: () => {
-          client.removeEventListener(eventName);
-        }
-      }
+
+      return Reflect.get(target, prop, receiver);
     }
-  }
+  };
 
-  const clientProxy = new Proxy<ZapClientWithEvents<TEvents>>(client as ZapClientWithEvents<TEvents>, proxyHandler);
-
-  return clientProxy;
+  return new Proxy<ZapClientWithEvents<TEvents>>(
+    client as ZapClientWithEvents<TEvents>,
+    proxyHandler
+  );
 };
-

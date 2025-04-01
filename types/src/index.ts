@@ -56,3 +56,4 @@ export type ZapServerEvent<T extends z.ZodTypeAny> = {
 }
 
 export type EventMap = Record<string, ZapEvent<any, any> | ZapServerEvent<any>>;
+
