@@ -1,14 +1,14 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { serialize, deserialize, generateId } from "./utils";
-import type { EventMap, MiddlewareMetadata, MiddlewareType, MiddlwareContext, MiddlwareMsg, ZapEvent, ZapServerEvent } from "@zap-socket/types";
+import type { EventMap, MiddlewareMetadata, MiddlwareContext, MiddlwareMsg, ZapEvent, ZapServerEvent, ZapStream } from "@zap-socket/types";
 
 interface ZapServerConstructorT {
   port: number;
   events?: EventMap
 }
 
-const isZapEvent = (event: any): event is ZapEvent<any, any> => {
-  return "process" in event;
+const isClientEvent = (event: any): event is ZapEvent<any, any> => {
+  return "process" in event; // both zapEvent and zapStream have process in them.
 }
 
 export class ZapServer<T extends EventMap> {
@@ -41,11 +41,13 @@ export class ZapServer<T extends EventMap> {
         const clientId = this.wsToId.get(ws)!;
 
         for (const [event, eventObj] of Object.entries(this._events)) {
-          if (!isZapEvent(eventObj)) continue; // skip server events
+          if (!isClientEvent(eventObj)) continue;
 
           const { process, middleware } = eventObj;
+
           const parsedMessage = deserialize<{
             requestId: string;
+            streamId: string;
             event: string;
             data: any;
           }>(message.toString());
@@ -53,7 +55,7 @@ export class ZapServer<T extends EventMap> {
             parsedMessage &&
             parsedMessage["event"] === event
           ) {
-            const { data, requestId } = parsedMessage
+            const { data, requestId, streamId } = parsedMessage;
             // Do middleware checks
             const ctx: MiddlwareContext = {};
             if (middleware) {
@@ -75,12 +77,32 @@ export class ZapServer<T extends EventMap> {
               });
             }
             // By this point all the middlewares allow to pass through
-            const result = process(data, { server: this, id: this.wsToId.get(ws)!, buffer: ctx });
-            const serialized = serialize({ requestId, event, data: result });
-            //  TODO: throw some nice error: only return stuff that is serializable
-            // i.e. primary data types and objects
-            if (!serialized) return;
-            ws.send(serialized);
+
+
+            if (requestId) {
+              const result = process(data, { server: this, id: this.wsToId.get(ws)!, buffer: ctx });
+              const serialized = serialize(requestId ? { requestId, event, data: result } : { event, data: result });
+              //  TODO: throw some nice error: only return stuff that is serializable
+              // i.e. primary data types and objects
+              if (!serialized) return;
+              ws.send(serialized);
+            } else if (streamId) {
+              const consumeStream = async () => {
+                const result: AsyncGenerator<any, void, unknown> = process(data, { server: this, id: this.wsToId.get(ws)!, buffer: ctx });
+                for await (const x of result) {
+                  const packet = {
+                    streamId,
+                    fragment: x
+                  }
+                  this.sendMessageRaw(clientId, packet);
+                }
+                this.sendMessageRaw(clientId, {
+                  streamId,
+                  done: true
+                });
+              };
+              consumeStream();
+            }
             return; // finally return to avoid looping through rest of events unneccessarily
           }
         }
@@ -105,13 +127,29 @@ export class ZapServer<T extends EventMap> {
   }
 
   public sendMessageRaw(clientId: string, data: any) {
-    const ws = this.idToWs.get(clientId);
+    const ws = this.idToWs.get(clientId as string);
     //  TODO: throw a nice error
     if (!ws) return;
     const serializedData = serialize(data);
     //  TODO: throw a nice error
     if (!serializedData) return;
     ws.send(serializedData);
+  }
+
+  public sendMessage(event: keyof T, clientId: string, data: any) {
+    const ws = this.idToWs.get(clientId);
+    //  TODO: throw a nice error
+    if (!ws) return;
+    const packet = {
+      event,
+      data
+    }
+    const serializedPacket = serialize(packet);
+
+    //  TODO: throw a nice error
+    if (!serializedPacket) return;
+
+    ws.send(serializedPacket);
   }
 
   public broadcastRaw(data: any) {
@@ -123,6 +161,41 @@ export class ZapServer<T extends EventMap> {
     this.idToWs.forEach((ws) => {
       ws.send(serializedData);
     })
+  }
+
+  public broadcast(event: keyof T, data: any) {
+    const packet = {
+      event,
+      data
+    };
+
+    const serializedPacket = serialize(packet)!;
+
+    if (!serializedPacket) return;
+
+    this.idToWs.forEach((ws) => {
+      ws.send(serializedPacket);
+    });
+  }
+
+  public selectiveBroascast(event: string, data: any, connections: string[]) {
+    const serialized = serialize(data);
+    if (!serialized) {
+      //  TODO: throw a nice error
+      return;
+    }
+    const packet = {
+      event,
+      data
+    };
+
+    const serializedPacket = serialize(packet)!; // if data is serializable then packet is too, so no need to check
+
+    connections
+      .flatMap(x => this.idToWs.get(x) ?? [])
+      .forEach((ws) => {
+        ws.send(serializedPacket);
+      });
   }
 
   get event() {
@@ -153,6 +226,14 @@ export class ZapServer<T extends EventMap> {
       broadcast: (data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : never)) => void;
     }
       }
+  }
+
+  get clients() {
+    return new Set(this.idToWs.keys())
+  }
+
+  get socketMap() {
+    return this.idToWs;
   }
 }
 

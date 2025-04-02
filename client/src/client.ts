@@ -4,6 +4,7 @@ import { generateId, serialize, safeJsonParse } from "./utils";
 
 // actual socket payload := {
 //   requestId: 16 character id,
+//   streamId: 16 character id,
 //   event: messageType,
 //   data: { ... }
 // }
@@ -16,8 +17,10 @@ interface CreateClientArgs {
   url: string;
 }
 
+//  TODO: convert this to zod for better validation.
 interface Packet {
   requestId: string;
+  packet: string;
   event: string;
   data: any;
 }
@@ -43,8 +46,6 @@ export class ZapClient {
 
       this.ws.onmessage = (e) => {
         const parsedMsg = safeJsonParse(e.data.toString());
-        console.log("parsedMsg: ");
-        console.log(parsedMsg);
         if (!parsedMsg) return;
         const { event, requestId, data } = parsedMsg;
 

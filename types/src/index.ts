@@ -51,6 +51,19 @@ export type ZapEvent<T extends EventInput, R = any> = T extends z.ZodTypeAny
     process: (ctx: Context) => R;
   };
 
+export type ZapStream<T extends EventInput, R = any> = T extends z.ZodTypeAny
+  ? {
+    input: T;
+    middleware?: MiddlewareType[];
+    process: (input: z.infer<T>, ctx: Context) => AsyncGenerator<R, void, unknown>;
+  }
+  : {
+    input: z.ZodVoid;
+    middleware?: MiddlewareType[];
+    process: (ctx: Context) => AsyncGenerator<R, void, unknown>;
+  };
+
+
 export type ZapServerEvent<T extends z.ZodTypeAny> = {
   data: z.infer<T>;
 }
