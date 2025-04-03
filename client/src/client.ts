@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { EventMap, ZapEvent, ZapServerEvent } from "@zap-socket/types";
+import type { EventMap, ZapEvent, ZapServerEvent, ZapStream } from "@zap-socket/types";
 import { generateId, serialize, safeJsonParse } from "./utils";
 
 // actual socket payload := {
@@ -20,9 +20,35 @@ interface CreateClientArgs {
 //  TODO: convert this to zod for better validation.
 interface Packet {
   requestId: string;
-  packet: string;
+  streamId: string;
   event: string;
   data: any;
+  fragment: any;
+}
+
+class AsyncQueue<T> {
+  private queue: T[] = [];
+  private resolvers: ((value: T) => void)[] = [];
+
+  push(value: T) {
+    const resolver = this.resolvers.shift();
+    if (resolver) {
+      resolver(value);
+    } else {
+      this.queue.push(value);
+    }
+  }
+
+  async pop(): Promise<T> {
+    return new Promise((resolve) => {
+      const value = this.queue.shift();
+      if (value !== undefined) {
+        resolve(value);
+      } else {
+        this.resolvers.push(resolve);
+      }
+    });
+  }
 }
 
 export class ZapClient {
@@ -32,7 +58,8 @@ export class ZapClient {
   public onconnect: (() => void) | null = null;
   private _connected: boolean = false; // here connected means id setup is complete; not connected in the treditional sense.
   private requestMap = new Map<string, { resolve: (value: unknown) => void, reject: (reason: any) => void }>();
-  private listen: Map<string, (callback: any) => void> = new Map();
+  private listen: Map<string, (data: any) => void> = new Map();
+  public activeStreams: Map<string, AsyncQueue<any>> = new Map();
 
   constructor(url: string) {
     this._url = url;
@@ -45,22 +72,29 @@ export class ZapClient {
       }
 
       this.ws.onmessage = (e) => {
-        const parsedMsg = safeJsonParse(e.data.toString());
+        const parsedMsg: Packet = safeJsonParse(e.data.toString());
         if (!parsedMsg) return;
-        const { event, requestId, data } = parsedMsg;
+        const { event, requestId, streamId, data, fragment } = parsedMsg;
 
-        const requestResolutionObj = this.requestMap.get(requestId);
-        if (!requestResolutionObj) return;
-        const { resolve } = requestResolutionObj;
-        resolve(data);
-        this.requestMap.delete(requestId);
-
-        this.listen.keys().forEach((eventName) => {
-          if (event === eventName) {
-            const callback = this.listen.get(event)!;
-            callback(event);
+        if (requestId) {
+          const requestResolutionObj = this.requestMap.get(requestId);
+          if (!requestResolutionObj) return;
+          const { resolve } = requestResolutionObj;
+          resolve(data);
+          this.requestMap.delete(requestId);
+        } else if (streamId) {
+          const messageQueue = this.activeStreams.get(streamId);
+          if (!messageQueue) {
+            //  TODO:  nice error message
+            return;
           }
-        })
+          messageQueue.push(fragment);
+        }
+
+        const listenerCallback = this.listen.get(event);
+        if (listenerCallback) {
+          listenerCallback(event);
+        }
       }
     };
   }
@@ -112,6 +146,23 @@ export class ZapClient {
     });
   }
 
+  public startStream(streamName: string, data: any) {
+    const streamId = generateId(16);
+    this.activeStreams.set(streamId, new AsyncQueue());
+    const packet = {
+      stream: streamName,
+      streamId,
+      data
+    }
+    const serializedPacket = serialize(packet);
+    if (!serializedPacket) {
+      //  TODO: throw a nice error
+      return;
+    }
+    this.ws.send(serializedPacket);
+    return streamId;
+  }
+
   public addEventListener(event: string, callback: (arg: any) => void) {
     this.listen.set(event, callback);
   }
@@ -134,18 +185,25 @@ type ServerEventHandler<T extends z.ZodTypeAny> = {
   unlisten: () => void;
 }
 
+type StreamHandler<TInput extends z.ZodTypeAny, TOutput> = {
+  send: TInput extends z.ZodVoid
+  ? () => AsyncGenerator<TOutput, void, unknown>
+  : (input: z.infer<TInput>) => AsyncGenerator<TOutput, void, unknown>;
+}
+
 export type ZapClientWithEvents<T extends EventMap> = ZapClient & {
   events: {
-    [K in keyof T]:
+    [K in keyof T as T[K] extends ZapStream<any, any> ? never : K]:
     T[K] extends ZapServerEvent<any>
     ? ServerEventHandler<T[K]["data"]>
     : T[K] extends ZapEvent<any, any>
     ? EventHandler<T[K]["input"], ReturnType<T[K]["process"]>>
     : unknown;
   };
+  streams: {
+    [K in keyof T as T[K] extends ZapStream<any, any> ? K : never]: T[K] extends ZapStream<any, any> ? StreamHandler<T[K]["input"], ReturnType<T[K]["process"]>> : unknown;
+  };
 };
-
-const getAllPropsAndMethods = (obj: any) => [...new Set([...Object.getOwnPropertyNames(obj), ...Object.getOwnPropertyNames(Object.getPrototypeOf(obj))])];
 
 export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientArgs): ZapClientWithEvents<TEvents> => {
   console.log("createZapClient called");
@@ -167,6 +225,24 @@ export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientA
                 client.removeEventListener(eventName);
               }
             };
+          }
+        });
+      }
+
+      if (prop === "streams") {
+        return new Proxy({} as any, {
+          get(target, streamName, reciver) {
+            return {
+              send: async function* (data: any) {
+                console.log("sending stream...");
+                const streamId = client.startStream(streamName as string, data); //  TODO: investigate if streamName is not a string...
+                const messageQueue = client.activeStreams.get(streamId as string);
+                if (!messageQueue) return;
+                while (true) {
+                  yield await messageQueue.pop();
+                }
+              }
+            }
           }
         });
       }

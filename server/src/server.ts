@@ -48,12 +48,13 @@ export class ZapServer<T extends EventMap> {
           const parsedMessage = deserialize<{
             requestId: string;
             streamId: string;
-            event: string;
+            event: string; // name of event
+            stream: string; // name of stream
             data: any;
           }>(message.toString());
           if (
             parsedMessage &&
-            parsedMessage["event"] === event
+            (parsedMessage["event"] === event || parsedMessage["stream"] === event)
           ) {
             const { data, requestId, streamId } = parsedMessage;
             // Do middleware checks

@@ -51,7 +51,7 @@ export type ZapEvent<T extends EventInput, R = any> = T extends z.ZodTypeAny
     process: (ctx: Context) => R;
   };
 
-export type ZapStream<T extends EventInput, R = any> = T extends z.ZodTypeAny
+export type ZapStream<T extends EventInput, R> = T extends z.ZodTypeAny
   ? {
     input: T;
     middleware?: MiddlewareType[];
@@ -68,5 +68,5 @@ export type ZapServerEvent<T extends z.ZodTypeAny> = {
   data: z.infer<T>;
 }
 
-export type EventMap = Record<string, ZapEvent<any, any> | ZapServerEvent<any>>;
+export type EventMap = Record<string, ZapEvent<any, any> | ZapServerEvent<any> | ZapStream<any, any>>;
 
