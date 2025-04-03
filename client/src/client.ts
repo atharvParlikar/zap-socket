@@ -24,6 +24,7 @@ interface Packet {
   event: string;
   data: any;
   fragment: any;
+  done: boolean;
 }
 
 class AsyncQueue<T> {
@@ -74,7 +75,7 @@ export class ZapClient {
       this.ws.onmessage = (e) => {
         const parsedMsg: Packet = safeJsonParse(e.data.toString());
         if (!parsedMsg) return;
-        const { event, requestId, streamId, data, fragment } = parsedMsg;
+        const { event, requestId, streamId, data, fragment, done } = parsedMsg;
 
         if (requestId) {
           const requestResolutionObj = this.requestMap.get(requestId);
@@ -86,6 +87,10 @@ export class ZapClient {
           const messageQueue = this.activeStreams.get(streamId);
           if (!messageQueue) {
             //  TODO:  nice error message
+            return;
+          }
+          if (done) {
+            this.activeStreams.delete(streamId);
             return;
           }
           messageQueue.push(fragment);
