@@ -211,7 +211,6 @@ export type ZapClientWithEvents<T extends EventMap> = ZapClient & {
 };
 
 export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientArgs): ZapClientWithEvents<TEvents> => {
-  console.log("createZapClient called");
   const client = new ZapClient(url);
 
   const proxyHandler: ProxyHandler<ZapClientWithEvents<TEvents>> = {
@@ -239,7 +238,6 @@ export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientA
           get(target, streamName, reciver) {
             return {
               send: async function* (data: any) {
-                console.log("sending stream...");
                 const streamId = client.startStream(streamName as string, data); //  TODO: investigate if streamName is not a string...
                 const messageQueue = client.activeStreams.get(streamId as string);
                 if (!messageQueue) return;
