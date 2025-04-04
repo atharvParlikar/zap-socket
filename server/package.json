@@ -1,6 +1,6 @@
 {
   "name": "@zap-socket/server",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "A fully typesafe tRPC-inspired WebSocket library with Zod validation, req-res model, and native subscriptions.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,7 +23,7 @@
     "vitest": "^3.0.9"
   },
   "dependencies": {
-    "@zap-socket/types": "^0.0.2",
+    "@zap-socket/types": "^0.0.3",
     "zod": "^3.24.2"
   }
 }
