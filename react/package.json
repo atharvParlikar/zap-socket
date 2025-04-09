@@ -1,0 +1,27 @@
+{
+  "name": "@zap-socket/react",
+  "version": "0.0.3",
+  "description": "React hooks for zap-socket",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "repository": "https://github.com/atharvparlikar/zap-socket",
+  "author": "Atharv Parlikar",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@types/react": "^19.1.0",
+    "@zap-socket/client": "^0.0.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  },
+  "peerDependencies": {
+    "react": "^16.8.0 || ^17.0.0 || ^18.0.0",
+    "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0"
+  }
+}

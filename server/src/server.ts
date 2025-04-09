@@ -29,7 +29,7 @@ export class ZapServer<T extends EventMap> {
 
     this.wss.on("connection", (ws, req) => {
       ws.on("message", (message) => {
-        if (!this.wsToId.get(ws)) {
+        if (!this.wsToId.get(ws) && message.toString() === "OPEN") {
           const id = generateId();
           this.wsToId.set(ws, id);
           this.idToWs.set(id, ws);
