@@ -40,72 +40,66 @@ export class ZapServer<T extends EventMap> {
 
         const clientId = this.wsToId.get(ws)!;
 
-        for (const [event, eventObj] of Object.entries(this._events)) {
-          if (!isClientEvent(eventObj)) continue;
+        const parsedMessage = deserialize<{
+          requestId: string;
+          streamId: string;
+          event: string;
+          stream: string;
+          data: any;
+        }>(message.toString());
 
-          const { process, middleware } = eventObj;
+        if (!parsedMessage) return;
 
-          const parsedMessage = deserialize<{
-            requestId: string;
-            streamId: string;
-            event: string; // name of event
-            stream: string; // name of stream
-            data: any;
-          }>(message.toString());
-          if (
-            parsedMessage &&
-            (parsedMessage["event"] === event || parsedMessage["stream"] === event)
-          ) {
-            const { data, requestId, streamId } = parsedMessage;
-            // Do middleware checks
-            const ctx: MiddlwareContext = {};
-            if (middleware) {
-              middleware.forEach((m) => {
-                const metadata: MiddlewareMetadata = {
-                  id: clientId,
-                  ip: req.socket.remoteAddress!,
-                  timestamp: Date.now(),
-                  size: message.toString().length
-                }
-                const msg: MiddlwareMsg = {
-                  event,
-                  data: parsedMessage,
-                  metadata
-                }
-                if (!m(ctx, msg)) {
-                  return;
-                }
-              });
-            }
-            // By this point all the middlewares allow to pass through
+        const { event, stream, data, requestId, streamId } = parsedMessage;
+        const key = event || stream;
+        const eventObj = this._events[key];
 
+        if (!eventObj || !isClientEvent(eventObj)) return;
 
-            if (requestId) {
-              const result = process(data, { server: this, id: this.wsToId.get(ws)!, buffer: ctx });
-              const serialized = serialize(requestId ? { requestId, event, data: result } : { event, data: result });
-              //  TODO: throw some nice error: only return stuff that is serializable
-              // i.e. primary data types and objects
-              if (!serialized) return;
-              ws.send(serialized);
-            } else if (streamId) {
-              const consumeStream = async () => {
-                const result: AsyncGenerator<any, void, unknown> = process(data, { server: this, id: this.wsToId.get(ws)!, buffer: ctx });
-                for await (const x of result) {
-                  const packet = {
-                    streamId,
-                    fragment: x
-                  }
-                  this.sendMessageRaw(clientId, packet);
-                }
-                this.sendMessageRaw(clientId, {
-                  streamId,
-                  done: true
-                });
-              };
-              consumeStream();
-            }
-            return; // finally return to avoid looping through rest of events unneccessarily
+        const { process, middleware } = eventObj;
+
+        // Setup middleware context
+        const ctx: MiddlwareContext = {};
+        if (middleware) {
+          for (const m of middleware) {
+            const metadata: MiddlewareMetadata = {
+              id: clientId,
+              ip: req.socket.remoteAddress!,
+              timestamp: Date.now(),
+              size: message.toString().length,
+            };
+
+            const msg: MiddlwareMsg = {
+              event: key,
+              data: parsedMessage,
+              metadata,
+            };
+
+            if (!m(ctx, msg)) return;
           }
+        }
+
+        // All middleware passed
+        const context = { server: this, id: this.wsToId.get(ws)!, buffer: ctx };
+
+        if (requestId) { // req-res premitive
+          const result = process(data, context);
+          if (!result) {
+            ws.send("ACK");
+            return;
+          }
+          const serialized = serialize({ requestId, event: key, data: result });
+          if (!serialized) return;
+          ws.send(serialized);
+        } else if (streamId) { // stream premitive
+          const consumeStream = async () => {
+            const result: AsyncGenerator<any, void, unknown> = process(data, context);
+            for await (const fragment of result) {
+              this.sendMessageRaw(clientId, { streamId, fragment });
+            }
+            this.sendMessageRaw(clientId, { streamId, done: true });
+          };
+          consumeStream();
         }
       });
 
