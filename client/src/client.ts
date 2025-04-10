@@ -17,6 +17,8 @@ interface CreateClientArgs {
   url: string;
 }
 
+const REQ_ID_LEN = 16;
+
 //  TODO: convert this to zod for better validation.
 interface Packet {
   requestId: string;
@@ -73,17 +75,19 @@ export class ZapClient {
       }
 
       this.ws.onmessage = (e) => {
+        if (e.data.toString().startsWith("ACK")) return;
+
         const parsedMsg: Packet = safeJsonParse(e.data.toString());
         if (!parsedMsg) return;
         const { event, requestId, streamId, data, fragment, done } = parsedMsg;
 
-        if (requestId) {
+        if (requestId) { // for req-res
           const requestResolutionObj = this.requestMap.get(requestId);
           if (!requestResolutionObj) return;
           const { resolve } = requestResolutionObj;
           resolve(data);
           this.requestMap.delete(requestId);
-        } else if (streamId) {
+        } else if (streamId) { // for streams
           const messageQueue = this.activeStreams.get(streamId);
           if (!messageQueue) {
             //  TODO:  nice error message
@@ -96,6 +100,7 @@ export class ZapClient {
           messageQueue.push(fragment);
         }
 
+        // for listeners
         const listenerCallback = this.listen.get(event);
         if (listenerCallback) {
           listenerCallback(event);
@@ -133,7 +138,7 @@ export class ZapClient {
     });
   }
 
-  public sendMessageRaw(event: string, data: any) {
+  public __sendEventRaw(event: string, data: any) {
     const requestId = generateId(16);
     const packet = {
       requestId,
@@ -149,6 +154,32 @@ export class ZapClient {
     return new Promise((resolve, reject) => {
       this.requestMap.set(requestId, { resolve, reject });
     });
+  }
+
+  public sendMessage(event: string, data: any) {
+    const packet = {
+      event,
+      data
+    }
+
+    this.sendMessageRaw(packet);
+  }
+
+  public sendReq(event: string, data: any) {
+    const requestId = generateId(REQ_ID_LEN);
+    const packet = {
+      requestId,
+      event,
+      data
+    }
+
+    this.sendMessageRaw(packet);
+  }
+
+  public sendMessageRaw(data: any) {
+    const serializedData = serialize(data);
+    if (!serializedData) return;
+    this.ws.send(serializedData);
   }
 
   public startStream(streamName: string, data: any) {
@@ -220,7 +251,7 @@ export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientA
           get(eventsTarget, eventName: string, eventsReceiver) {
             return {
               send: (input: any) => {
-                return client.sendMessageRaw(eventName, input);
+                return client.sendMessage(eventName, input);
               },
               listen: (callback: (input: any) => void) => {
                 client.addEventListener(eventName, callback);

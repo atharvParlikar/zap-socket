@@ -84,7 +84,7 @@ export class ZapServer<T extends EventMap> {
 
         if (requestId) { // req-res premitive
           const result = process(data, context);
-          if (!result) {
+          if (result === undefined) { // just ACK the request process returns nothing
             ws.send("ACK");
             return;
           }
