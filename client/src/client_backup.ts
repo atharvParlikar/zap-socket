@@ -15,22 +15,7 @@ import { generateId, serialize, safeJsonParse } from "./utils";
 
 interface CreateClientArgs {
   url: string;
-  reconnect?: {
-    enabled?: boolean;
-    maxAttempts?: number;
-    initialDelay?: number;
-    maxDelay?: number;
-    jitter?: boolean;
-  };
 }
-
-const DEFAULT_RECONNECT_OPTIONS = {
-  enabled: true,
-  maxAttempts: 10,
-  initialDelay: 1000,  // 1 second
-  maxDelay: 30000,     // 30 seconds
-  jitter: true,        // Add randomization to avoid thundering herd
-};
 
 const REQ_ID_LEN = 16;
 
@@ -74,39 +59,17 @@ export class ZapClient {
   public ws: WebSocket;
   private _id: string = "";
   public onconnect: (() => void) | null = null;
-  public ondisconnect: (() => void) | null = null;
-  public onreconnect: ((attempt: number) => void) | null = null;
-  public onreconnectfailed: (() => void) | null = null;
-  private _connected: boolean = false; // here connected means id setup is complete; not connected in the traditional sense.
-  private _isConnecting: boolean = false;
-  private _reconnectOptions: Required<CreateClientArgs["reconnect"]>;
-  private _reconnectAttempts: number = 0;
-  private _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private _connected: boolean = false; // here connected means id setup is complete; not connected in the treditional sense.
   private requestMap = new Map<string, { resolve: (value: unknown) => void, reject: (reason: any) => void }>();
   private listen: Map<string, (data: any) => void> = new Map();
   public activeStreams: Map<string, AsyncQueue<any>> = new Map();
 
-  constructor(url: string, reconnectOptions: CreateClientArgs["reconnect"] = {}) {
-    this.ws = {} as WebSocket; // to slience the ts compiler
+  constructor(url: string) {
     this._url = url;
-    this._reconnectOptions = {
-      ...DEFAULT_RECONNECT_OPTIONS,
-      ...reconnectOptions
-    };
-    this._connect();
-  }
-
-  private _connect() {
-    if (this._isConnecting) return;
-
-    this._isConnecting = true;
-    this.ws = new WebSocket(this._url);
+    this.ws = new WebSocket(url);
 
     this.ws.onopen = async () => {
-      this._isConnecting = false;
-      this._reconnectAttempts = 0; // Reset reconnect attempts on successful connection
-
-      // even though the server is open
+      // even tho the server is open
       if (!this._connected) {
         await this.initializeId();
       }
@@ -149,64 +112,8 @@ export class ZapClient {
         if (listenerCallback) {
           listenerCallback(event);
         }
-      };
-    };
-
-    this.ws.onclose = (event) => {
-      this._isConnecting = false;
-      this._connected = false;
-
-      if (this.ondisconnect) {
-        this.ondisconnect();
-      }
-
-      // Handle reconnection
-      if (this._reconnectOptions?.enabled) {
-        this._scheduleReconnect();
       }
     };
-
-    this.ws.onerror = (error) => {
-      // WebSocket error events don't provide much useful information
-      // The connection will be closed after an error, triggering onclose
-      console.error("WebSocket error:", error);
-    };
-  }
-
-  private _scheduleReconnect() {
-    if (this._reconnectTimer) {
-      clearTimeout(this._reconnectTimer);
-    }
-
-    // If we've exceeded max attempts, stop trying
-    if (this._reconnectAttempts >= this._reconnectOptions?.maxAttempts!) {
-      if (this.onreconnectfailed) {
-        this.onreconnectfailed();
-      }
-      return;
-    }
-
-    // Calculate the delay with exponential backoff
-    const attempt = this._reconnectAttempts + 1;
-    let delay = Math.min(
-      this._reconnectOptions?.initialDelay! * Math.pow(2, attempt),
-      this._reconnectOptions?.maxDelay!
-    );
-
-    // Add jitter to prevent thundering herd problem
-    if (this._reconnectOptions?.jitter) {
-      delay = delay * (0.5 + Math.random() * 0.5);
-    }
-
-    this._reconnectTimer = setTimeout(() => {
-      this._reconnectAttempts++;
-
-      if (this.onreconnect) {
-        this.onreconnect(this._reconnectAttempts);
-      }
-
-      this._connect();
-    }, delay);
   }
 
   get connected(): boolean {
@@ -263,6 +170,7 @@ export class ZapClient {
     }
 
     this.sendMessageRaw(packet);
+
   }
 
   public sendReq(event: string, data: any) {
@@ -285,14 +193,7 @@ export class ZapClient {
   public sendMessageRaw(data: any) {
     const serializedData = serialize(data);
     if (!serializedData) return;
-
-    if (this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(serializedData);
-    } else {
-      // Handle case where we try to send while disconnected
-      // Could queue messages and send once reconnected
-      throw new Error("Cannot send message, WebSocket is not connected");
-    }
+    this.ws.send(serializedData);
   }
 
   public startStream(streamName: string, data: any) {
@@ -308,13 +209,8 @@ export class ZapClient {
       //  TODO: throw a nice error
       return;
     }
-
-    if (this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(serializedPacket);
-      return streamId;
-    } else {
-      throw new Error("Cannot start stream, WebSocket is not connected");
-    }
+    this.ws.send(serializedPacket);
+    return streamId;
   }
 
   public addEventListener(event: string, callback: (arg: any) => void) {
@@ -323,25 +219,6 @@ export class ZapClient {
 
   public removeEventListener(event: string) {
     this.listen.delete(event);
-  }
-
-  // Manually close the connection
-  public close() {
-    if (this._reconnectTimer) {
-      clearTimeout(this._reconnectTimer);
-      this._reconnectTimer = null;
-    }
-
-    if (this.ws) {
-      this.ws.close();
-    }
-  }
-
-  // Manually trigger reconnection
-  public reconnect() {
-    this.close();
-    this._reconnectAttempts = 0; // Reset attempt counter for manual reconnect
-    this._connect();
   }
 }
 
@@ -378,8 +255,8 @@ export type ZapClientWithEvents<T extends EventMap> = ZapClient & {
   };
 };
 
-export const createZapClient = <TEvents extends EventMap>({ url, reconnect }: CreateClientArgs): ZapClientWithEvents<TEvents> => {
-  const client = new ZapClient(url, reconnect);
+export const createZapClient = <TEvents extends EventMap>({ url }: CreateClientArgs): ZapClientWithEvents<TEvents> => {
+  const client = new ZapClient(url);
 
   const proxyHandler: ProxyHandler<ZapClientWithEvents<TEvents>> = {
     get(target, prop: string, receiver) {

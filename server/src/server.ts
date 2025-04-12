@@ -13,6 +13,8 @@ const isClientEvent = (event: any): event is ZapEvent<any, any> => {
 
 export class ZapServer<T extends EventMap> {
   public wss: WebSocketServer;
+  public onconnect: (handler: (ctx: { id: string, ws: WebSocket }) => void) => void;
+  private onconnectHandler: (ctx: { id: string, ws: WebSocket }) => void;
   private wsToId: Map<WebSocket, string>;
   private idToWs: Map<string, WebSocket>;
   private _events: T = {} as T;
@@ -22,19 +24,27 @@ export class ZapServer<T extends EventMap> {
     this.wsToId = new Map();
     this.idToWs = new Map();
     this._events = events as T;
+    this.onconnectHandler = () => { };
+    this.onconnect = (handler) => {
+      this.onconnectHandler = handler;
+    }
 
     this.wss.on("listening", () => {
       if (callback) callback();
-    })
+    });
 
     this.wss.on("connection", (ws, req) => {
+
       ws.on("message", (message) => {
         if (!this.wsToId.get(ws) && message.toString() === "OPEN") {
           const id = generateId();
           this.wsToId.set(ws, id);
           this.idToWs.set(id, ws);
           ws.send("ID " + id);
-          console.log(`client ${id} connected.`);
+          this.onconnectHandler({
+            id,
+            ws
+          })
           return;
         }
 
@@ -85,7 +95,7 @@ export class ZapServer<T extends EventMap> {
         if (requestId) { // req-res premitive
           const result = process(data, context);
           if (result === undefined) { // just ACK the request process returns nothing
-            ws.send("ACK");
+            ws.send("ACK " + requestId);
             return;
           }
           const serialized = serialize({ requestId, event: key, data: result });

@@ -1,6 +1,6 @@
-import { useZap, ZapProvider } from "@zap-socket/react";
+import { useZap, ZapProvider } from "@zap-socket/react"
 import './App.css'
-import type { Events } from "../server/index";
+import type { Events } from "./server/index";
 import { useEffect, useState } from "react";
 
 function Test() {
