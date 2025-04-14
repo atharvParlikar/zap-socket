@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { createZapServer, zapStream, zapEvent } from "@zap-socket/server";
+import { createZapServer, zapStream, zapEvent, zapServerEvent } from "@zap-socket/server";
 
 const events = {
   llm: zapStream({
     input: z.string(),
-    process: async function* (input, ctx) {
+    process: async function* (input) {
       for (const token of input.toUpperCase().split(" ")) {
         yield await new Promise((resolve) => setTimeout(() => resolve(token), 10));
       }
@@ -21,6 +21,9 @@ const events = {
       num2: z.number(),
     }),
     process: ({ num1, num2 }) => num1 + num2
+  }),
+  update: zapServerEvent({
+    data: z.number()
   })
 };
 
@@ -32,4 +35,3 @@ server.onconnect((ctx) => {
   const { id } = ctx;
   console.log(`${id} joined the server`);
 });
-

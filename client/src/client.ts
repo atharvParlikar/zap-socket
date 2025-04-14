@@ -6,12 +6,16 @@ import { generateId, serialize, safeJsonParse } from "./utils";
 //   requestId: 16 character id,
 //   streamId: 16 character id,
 //   event: messageType,
-//   data: { ... }
+//   data: { ... },
+//   fragment: { ... },
+//   done: boolean,
+//   batch: boolean
 // }
 //
 // Event<input, output>
 //  -> send (input autocomplete)
 //  -> listen (output autocomplete)
+//  -> unlisten
 
 interface CreateClientArgs {
   url: string;
@@ -147,7 +151,7 @@ export class ZapClient {
         // for listeners
         const listenerCallback = this.listen.get(event);
         if (listenerCallback) {
-          listenerCallback(event);
+          listenerCallback(data);
         }
       };
     };
@@ -238,25 +242,8 @@ export class ZapClient {
     });
   }
 
-  public __sendEventRaw(event: string, data: any) {
-    const requestId = generateId(16);
-    const packet = {
-      requestId,
-      event,
-      data
-    }
-    const serializedPacket = serialize(packet);
-
-    //  TODO: Throw a useful error here:
-    if (!serializedPacket) return;
-    this.ws.send(serializedPacket);
-
-    return new Promise((resolve, reject) => {
-      this.requestMap.set(requestId, { resolve, reject });
-    });
-  }
-
   public sendMessage(event: string, data: any) {
+    console.log("sendMessage called");
     const packet = {
       event,
       data
@@ -271,6 +258,24 @@ export class ZapClient {
       requestId,
       event,
       data
+    }
+
+    this.sendMessageRaw(packet);
+
+    const promise = new Promise((resolve, reject) => {
+      this.requestMap.set(requestId, { resolve, reject });
+    });
+
+    return promise;
+  }
+
+  public batchSendMessage(event: string, data: any[]) {
+    const requestId = generateId(REQ_ID_LEN);
+    const packet = {
+      requestId,
+      event,
+      data,
+      batch: true
     }
 
     this.sendMessageRaw(packet);
@@ -349,6 +354,7 @@ type EventHandler<TInput extends z.ZodTypeAny, TOutput> = {
   send: TInput extends z.ZodVoid
   ? () => Promise<TOutput>
   : (input: z.infer<TInput>) => Promise<TOutput>;
+  batch: (input: z.infer<TInput>[]) => Promise<TOutput>;
   listen: (callback: (data: TOutput) => void) => void;
   unlisten: () => void;
 }
@@ -366,7 +372,7 @@ type StreamHandler<TInput extends z.ZodTypeAny, TOutput> = {
 
 export type ZapClientWithEvents<T extends EventMap> = ZapClient & {
   events: {
-    [K in keyof T as T[K] extends ZapStream<any, any> ? never : K]:
+    [K in keyof T as T[K] extends ZapEvent<any, any> | ZapServerEvent<any> ? K : never]:
     T[K] extends ZapServerEvent<any>
     ? ServerEventHandler<T[K]["data"]>
     : T[K] extends ZapEvent<any, any>
@@ -388,7 +394,10 @@ export const createZapClient = <TEvents extends EventMap>({ url, reconnect }: Cr
           get(eventsTarget, eventName: string, eventsReceiver) {
             return {
               send: (input: any) => {
-                return client.sendMessage(eventName, input);
+                return client.sendReq(eventName, input);
+              },
+              batch: (input: any[]) => {
+                return client.batchSendMessage(eventName, input);
               },
               listen: (callback: (input: any) => void) => {
                 client.addEventListener(eventName, callback);

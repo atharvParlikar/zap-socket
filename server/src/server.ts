@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { serialize, deserialize, generateId } from "./utils";
-import type { EventMap, MiddlewareMetadata, MiddlwareContext, MiddlwareMsg, ZapEvent, ZapServerEvent, ZapStream } from "@zap-socket/types";
+import type { EventMap, MiddlewareMetadata, MiddlwareContext, MiddlwareMsg, ZapEvent, ZapServerEvent } from "@zap-socket/types";
 
 interface ZapServerConstructorT {
   port: number;
@@ -56,11 +56,12 @@ export class ZapServer<T extends EventMap> {
           event: string;
           stream: string;
           data: any;
+          batch: boolean;
         }>(message.toString());
 
         if (!parsedMessage) return;
 
-        const { event, stream, data, requestId, streamId } = parsedMessage;
+        const { event, stream, data, requestId, streamId, batch } = parsedMessage;
         const key = event || stream;
         const eventObj = this._events[key];
 
@@ -93,13 +94,26 @@ export class ZapServer<T extends EventMap> {
         const context = { server: this, id: this.wsToId.get(ws)!, buffer: ctx };
 
         if (requestId) { // req-res premitive
-          const result = process(data, context);
+          let result;
+
+          if (batch) {
+            if (!data) {
+              ws.send("ACK " + requestId);
+              return;
+            }
+            result = data.map((part: any) => process(part, context));
+          } else {
+            result = process(data, context);
+          }
+
           if (result === undefined) { // just ACK the request process returns nothing
             ws.send("ACK " + requestId);
             return;
           }
+
           const serialized = serialize({ requestId, event: key, data: result });
           if (!serialized) return;
+
           ws.send(serialized);
         } else if (streamId) { // stream premitive
           const consumeStream = async () => {
@@ -203,33 +217,34 @@ export class ZapServer<T extends EventMap> {
       });
   }
 
-  get event() {
-    return Object.fromEntries(Object.keys(this._events).map((eventName) => {
-      //  HACK: use a better method to determine the type of event.
-      if ("data" in this._events[eventName]) {
-        // event is server event
-        return [eventName, {
-          send: (clientId: string, data?: any) => {
-            const packet = {
-              event: eventName,
-              data
+  get events() {
+    return Object.fromEntries(
+      Object.keys(this._events).map((eventName) => {
+        return [
+          eventName,
+          {
+            send: (clientId: string, data?: any) => {
+              const packet = {
+                event: eventName,
+                data
+              };
+              this.sendMessageRaw(clientId, packet);
+            },
+            broadcast: (data?: any) => {
+              const packet = {
+                event: eventName,
+                data
+              };
+              this.broadcastRaw(packet);
             }
-            this.sendMessageRaw(clientId, packet);
-          },
-          broadcast: (data?: any) => {
-            const packet = {
-              event: eventName,
-              data
-            }
-            this.broadcastRaw(packet);
           }
-        }]
-      }
-      return null;
-    }).filter(entry => entry !== null)) as { [K in keyof T as T[K] extends ZapServerEvent<any> ? K : never]: {
-      send: (clientId: string, data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : never)) => void;
-      broadcast: (data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : never)) => void;
-    }
+        ];
+      })
+    ) as {
+        [K in keyof T as T[K] extends ZapServerEvent<any> | ZapEvent<any, any> ? K : never]: {
+          send: (clientId: string, data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : T[K] extends ZapEvent<any, any> ? ReturnType<T[K]["process"]> : never)) => void;
+          broadcast: (data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : T[K] extends ZapEvent<any, any> ? ReturnType<T[K]["process"]> : never)) => void;
+        }
       }
   }
 

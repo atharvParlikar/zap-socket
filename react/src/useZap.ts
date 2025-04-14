@@ -1,7 +1,7 @@
 import { EventMap, ZapClientWithEvents } from "@zap-socket/client";
 import { ZapContextType } from "./types";
 import { useContext } from "react";
-import { ZapContext } from "./ZapProvider";
+import { Events, ZapContext } from "./ZapProvider";
 
 export function useZap<T extends EventMap>(): ZapContextType<T> {
   const context = useContext(ZapContext);
@@ -11,7 +11,8 @@ export function useZap<T extends EventMap>(): ZapContextType<T> {
 
   return {
     zap: context?.zap as ZapClientWithEvents<T>,
-    connected: context?.connected!
+    connected: context?.connected!,
+    syncedState: context?.syncedState as Events<T>,
   };
 }
 

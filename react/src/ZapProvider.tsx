@@ -1,4 +1,4 @@
-import { createZapClient, ZapClientWithEvents } from "@zap-socket/client";
+import { createZapClient, ZapClientWithEvents, ZapEvent, ZapServerEvent } from "@zap-socket/client";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { EventMap } from "@zap-socket/client";
 import { createContext } from "react";
@@ -10,6 +10,15 @@ interface ZapProvierProps {
 }
 
 export const ZapContext = createContext<ZapContextType<any> | undefined>(undefined) as unknown as React.Context<ZapContextType<EventMap> | undefined>;
+
+export type Events<T extends EventMap> = {
+  [K in keyof T as T[K] extends ZapEvent<any, any> | ZapServerEvent<any> ? K : never]:
+  T[K] extends ZapEvent<any, any> ?
+  () => ReturnType<T[K]["process"]> :
+  T[K] extends ZapServerEvent<any> ?
+  () => T[K]["data"] :
+  unknown;
+}
 
 export function ZapProvider<T extends EventMap>({ children, url }: ZapProvierProps) {
   const zapRef = useRef<ZapClientWithEvents<T> | null>(null);  // Only initialize once
@@ -47,8 +56,32 @@ export function ZapProvider<T extends EventMap>({ children, url }: ZapProvierPro
     };
   }, [url]);  // Only re-run when URL changes
 
+  const syncedState = (event: string) => {
+    const [state, setState] = useState<any[]>([]);
+    const zap = zapRef.current!;
+
+    useEffect(() => {
+      if (connected) {
+        zap.addEventListener(event, (data) => {
+          setState(x => [...x, data]);
+        });
+      }
+    }, [connected]);
+
+    return state;
+  }
+
+
+  const syncedStateProxyHandler: ProxyHandler<Events<T>> = {
+    get(target, prop, reciever) {
+      if (typeof prop === "string") return syncedState(prop);
+    }
+  }
+
+  const syncedStateProxy = new Proxy({} as Events<T>, syncedStateProxyHandler);
+
   return (
-    <ZapContext.Provider value={{ zap: zapRef.current, connected }}>
+    <ZapContext.Provider value={{ zap: zapRef.current, connected, syncedState: syncedStateProxy }}>
       {children}
     </ZapContext.Provider>
   );

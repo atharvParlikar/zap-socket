@@ -1,31 +1,45 @@
-import { useZap, ZapProvider } from "@zap-socket/react"
+import { useZap, ZapProvider } from "../../../react/src/index";
 import './App.css'
-import type { Events } from "./server/index";
-import { useEffect, useState } from "react";
+import type { Events } from "../server/index";
+import { useEffect } from "react";
 
 function Test() {
-  const { zap, connected } = useZap<Events>();
-  const [tokens, setTokens] = useState("");
+  const { zap, connected, syncedState } = useZap<Events>();
+
+  // const messages = syncedState("message");
+  //
+  // useEffect(() => {
+  //   if (connected) {
+  //     zap?.events.message.send("hello there");
+  //     zap?.events.message.send("howdy");
+  //     zap?.events.message.send("wzzup bitch");
+  //     zap?.events.message.send("finally nigga");
+  //   }
+  // }, [connected]);
+  //
+  // useEffect(() => {
+  //   console.log(messages);
+  // }, [messages])
 
   useEffect(() => {
     if (connected) {
-      console.log("Got here");
-
-      const stream = async () => {
-        const tokenStream = zap?.streams.llm.send("Hello")!;
-        for await (const token of tokenStream) {
-          console.log(token);
-          setTokens(x => x + " " + token);
-        }
-      }
-
-      stream();
+      zap?.events.message.send("Hello there friend");
+      zap?.addEventListener("message", (whatever) => {
+        console.log(whatever);
+      });
     }
   }, [connected]);
 
   return (
-    <div>
-      {tokens}
+    <div style={{
+      display: "flex",
+      flexDirection: "column"
+    }}>
+      {/* <ul> */}
+      {/*   { */}
+      {/*     messages.map((x, i) => <li key={i}>{x}</li>) */}
+      {/*   } */}
+      {/* </ul> */}
     </div>
   );
 }

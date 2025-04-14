@@ -2,9 +2,10 @@ import { z } from 'zod';
 
 export type ZapServerType<T extends EventMap> = {
   sendMessageRaw: (clientId: string, data: any) => void;
-  event: {
-    [K in keyof T as T[K] extends ZapServerEvent<any> ? K : never]: {
-      send: (clientId: string, data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : never)) => void;
+  events: {
+    [K in keyof T as T[K] extends ZapServerEvent<any> | ZapEvent<any, any> ? K : never]: {
+      send: (clientId: string, data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : T[K] extends ZapEvent<any, any> ? ReturnType<T[K]["process"]> : never)) => void;
+      broadcast: (data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : T[K] extends ZapEvent<any, any> ? ReturnType<T[K]["process"]> : never)) => void;
     }
   };
 };

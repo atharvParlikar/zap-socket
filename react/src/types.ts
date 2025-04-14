@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { EventMap, ZapClientWithEvents } from "@zap-socket/client";
+import { Events } from "./ZapProvider";
 
 export interface ZapProviderProps {
   children: ReactNode;
@@ -10,7 +11,8 @@ export interface ZapProviderProps {
   onDisconnect?: () => void;
 }
 
-export interface ZapContextType<T extends EventMap = EventMap> {
+export interface ZapContextType<T extends EventMap> {
   zap: ZapClientWithEvents<T> | null;
   connected: boolean;
+  syncedState: Events<T>;
 }
