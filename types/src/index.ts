@@ -39,7 +39,7 @@ export type MiddlewareType = (ctx: MiddlwareContext, msg: MiddlwareMsg) => boole
 
 export type EventInput = z.ZodTypeAny | undefined;
 
-export type ZapEvent<T extends EventInput, R = any, E = unknown> = T extends z.ZodTypeAny
+export type ZapEvent<T extends EventInput, R = any, E = any> = T extends z.ZodTypeAny
   ? {
     input: T;
     middleware?: MiddlewareType[];

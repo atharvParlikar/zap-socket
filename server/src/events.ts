@@ -8,35 +8,34 @@ export type Context = {
   buffer: MiddlwareContext;
 };
 
-export const zapEvent = <T extends EventInput, R, E>(
+export const zapEvent = <T extends EventInput, R, E = undefined>(
   eventObj: T extends z.ZodTypeAny
     ? {
       input: T;
       middleware?: MiddlewareType[];
       process: (input: z.infer<T>, ctx: Context) => R;
-      emitType?: E;
+      emitType?: E extends undefined ? undefined : E;
     }
     : {
       middleware?: MiddlewareType[];
       process: (ctx: Context) => R;
-      emitType?: E;
+      emitType?: E extends undefined ? undefined : E;
     }
-): ZapEvent<T, R> => {
+): ZapEvent<T, R, E> => {
   if ("input" in eventObj) {
-    // Explicitly construct the return object to match ZapEvent structure
     return {
       input: eventObj.input,
       middleware: eventObj.middleware,
       process: eventObj.process,
-      emitType: eventObj.emitType
-    } as ZapEvent<T, R>;
+      emitType: eventObj.emitType ? eventObj.emitType as E : undefined
+    } as ZapEvent<T, R, E>;
   }
   return {
     input: z.void(),
     middleware: eventObj.middleware,
     process: eventObj.process as any,
-    emitType: eventObj.emitType
-  } as ZapEvent<T, R>;
+    emitType: eventObj.emitType ? eventObj.emitType as E : undefined
+  } as ZapEvent<T, R, E>;
 }
 
 export const zapStream = <T extends EventInput, R>(

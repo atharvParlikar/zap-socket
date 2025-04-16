@@ -9,18 +9,18 @@
   dependencies:
     csstype "^3.0.2"
 
-"@zap-socket/client@^0.0.12":
-  version "0.0.12"
-  resolved "https://registry.yarnpkg.com/@zap-socket/client/-/client-0.0.12.tgz#f193dc1c15cd51c2deed3c699442c786c3788adf"
-  integrity sha512-tINnVCMZLMI+puFzBAFujTirAkcF8PlGzsjT4g/0jjIpXUK8xKQngN0BkII4jbcnmANj/zNsy8J0ERi8QlK0iQ==
+"@zap-socket/client@^0.0.15":
+  version "0.0.15"
+  resolved "https://registry.yarnpkg.com/@zap-socket/client/-/client-0.0.15.tgz#3b4313b4f838c1b8eb60385da460e46c058abf01"
+  integrity sha512-O+gAvS6nyGeyrD+JOC+7WrIZuTzzPeYPclP0zWaJDMs3I06HbLj/dI15JD5gxu0kAb+C8bHPPROieNG4awRe9A==
   dependencies:
-    "@zap-socket/types" "^0.0.3"
+    "@zap-socket/types" "^0.0.6"
     zod "^3.24.2"
 
-"@zap-socket/types@^0.0.3":
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@zap-socket/types/-/types-0.0.3.tgz#114f200cba79cd8aaca2c4a2cc747d25d0685a90"
-  integrity sha512-axDEH6wBzSgrPNPr4vUlyrBsULTYS66lfGzfq/fex3qULFccNAfP0rpSVSynlR0uRkufJIbol+qL4WHsevd/VQ==
+"@zap-socket/types@^0.0.6":
+  version "0.0.6"
+  resolved "https://registry.yarnpkg.com/@zap-socket/types/-/types-0.0.6.tgz#b8fffc94b700206550fc31b2827795d6478ced85"
+  integrity sha512-rQT6kebgM5mtg2IsoCjnXTLwv91N4SGA+x2fNS33T7xu27wsDRFLg16KXKOBII1aKWy7Vy7TnEc/WhWpDwraQA==
   dependencies:
     zod "^3.24.2"
 

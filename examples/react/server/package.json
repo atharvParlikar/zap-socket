@@ -10,7 +10,7 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@zap-socket/server": "^0.0.12",
+    "@zap-socket/server": "^0.0.16",
     "zod": "^3.24.2"
   }
 }

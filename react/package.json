@@ -15,7 +15,8 @@
   ],
   "dependencies": {
     "@types/react": "^19.1.0",
-    "@zap-socket/client": "^0.0.13"
+    "@zap-socket/client": "^0.0.15",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "typescript": "^5.8.2"

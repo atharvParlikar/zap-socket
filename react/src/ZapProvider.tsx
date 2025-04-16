@@ -1,8 +1,9 @@
-import { createZapClient, ZapClientWithEvents, ZapEvent, ZapServerEvent } from "@zap-socket/client";
+import { createZapClient, ZapClientWithEvents, } from "@zap-socket/client";
+import { ZapEvent, ZapServerEvent, EventMap } from "@zap-socket/types";
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { EventMap } from "@zap-socket/client";
 import { createContext } from "react";
 import { ZapContextType } from "./types";
+import { z, ZodType, ZodTypeAny } from "zod";
 
 interface ZapProvierProps {
   children: ReactNode;
@@ -13,12 +14,19 @@ export const ZapContext = createContext<ZapContextType<any> | undefined>(undefin
 
 export type Events<T extends EventMap> = {
   [K in keyof T as T[K] extends ZapEvent<any, any> | ZapServerEvent<any> ? K : never]:
-  T[K] extends ZapEvent<any, any> ?
-  () => ReturnType<T[K]["process"]>[] :
-  T[K] extends ZapServerEvent<any> ?
-  () => T[K]["data"][] :
-  unknown;
-}
+  T[K] extends ZapEvent<any, any>
+  ? () => (
+    NonNullable<T[K]["emitType"]> extends never
+    ? (ReturnType<T[K]["process"]> extends void
+      ? undefined
+      : ReturnType<T[K]["process"]>[])
+    : NonNullable<T[K]["emitType"]> extends ZodType<any, any, any>
+    ? z.infer<NonNullable<T[K]["emitType"]>> : never
+  )
+  : T[K] extends ZapServerEvent<any>
+  ? () => T[K]["data"][]
+  : unknown;
+};
 
 export function ZapProvider<T extends EventMap>({ children, url }: ZapProvierProps) {
   const zapRef = useRef<ZapClientWithEvents<T> | null>(null);  // Only initialize once

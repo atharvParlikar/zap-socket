@@ -1,4 +1,5 @@
-import { EventMap, ZapClientWithEvents } from "@zap-socket/client";
+import { ZapClientWithEvents } from "@zap-socket/client";
+import { EventMap } from "@zap-socket/types";
 import { ZapContextType } from "./types";
 import { useContext } from "react";
 import { Events, ZapContext } from "./ZapProvider";

@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
-import { EventMap, ZapClientWithEvents } from "@zap-socket/client";
+import { ZapClientWithEvents } from "@zap-socket/client";
+import { EventMap } from "@zap-socket/types";
 import { Events } from "./ZapProvider";
 
 export interface ZapProviderProps {

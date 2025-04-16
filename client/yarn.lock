@@ -458,10 +458,10 @@
     loupe "^3.1.3"
     tinyrainbow "^2.0.0"
 
-"@zap-socket/types@^0.0.3":
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@zap-socket/types/-/types-0.0.3.tgz#114f200cba79cd8aaca2c4a2cc747d25d0685a90"
-  integrity sha512-axDEH6wBzSgrPNPr4vUlyrBsULTYS66lfGzfq/fex3qULFccNAfP0rpSVSynlR0uRkufJIbol+qL4WHsevd/VQ==
+"@zap-socket/types@^0.0.6":
+  version "0.0.6"
+  resolved "https://registry.yarnpkg.com/@zap-socket/types/-/types-0.0.6.tgz#b8fffc94b700206550fc31b2827795d6478ced85"
+  integrity sha512-rQT6kebgM5mtg2IsoCjnXTLwv91N4SGA+x2fNS33T7xu27wsDRFLg16KXKOBII1aKWy7Vy7TnEc/WhWpDwraQA==
   dependencies:
     zod "^3.24.2"
 
