@@ -1,23 +1,38 @@
 import { z } from "zod";
-import type { EventInput, Context, ZapEvent, ZapStream, ZapServerEvent, MiddlewareType } from "@zap-socket/types";
+import type { EventInput, ZapEvent, ZapStream, ZapServerEvent, MiddlewareType, MiddlwareContext } from "@zap-socket/types";
+import { ZapServer } from "./server";
 
-export const zapEvent = <T extends EventInput, R>(
+export type Context = {
+  server: ZapServer<any>;
+  id: string;
+  buffer: MiddlwareContext;
+};
+
+export const zapEvent = <T extends EventInput, R, E>(
   eventObj: T extends z.ZodTypeAny
     ? {
       input: T;
       middleware?: MiddlewareType[];
       process: (input: z.infer<T>, ctx: Context) => R;
+      emitType?: E;
     }
     : {
       middleware?: MiddlewareType[];
       process: (ctx: Context) => R;
+      emitType?: E;
     }
 ): ZapEvent<T, R> => {
   if ("input" in eventObj) {
-    return eventObj as ZapEvent<T, R>;
+    // Explicitly construct the return object to match ZapEvent structure
+    return {
+      input: eventObj.input,
+      middleware: eventObj.middleware,
+      process: eventObj.process
+    } as ZapEvent<T, R>;
   }
   return {
     input: z.void(),
+    middleware: eventObj.middleware,
     process: eventObj.process as any
   } as ZapEvent<T, R>;
 }

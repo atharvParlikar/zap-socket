@@ -249,7 +249,7 @@ export class ZapServer<T extends EventMap> {
   }
 
   get clients() {
-    return new Set(this.idToWs.keys())
+    return this.idToWs.keys().toArray();
   }
 
   get socketMap() {

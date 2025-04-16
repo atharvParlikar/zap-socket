@@ -2,16 +2,15 @@ import { z } from 'zod';
 
 export type ZapServerType<T extends EventMap> = {
   sendMessageRaw: (clientId: string, data: any) => void;
-  events: {
-    [K in keyof T as T[K] extends ZapServerEvent<any> | ZapEvent<any, any> ? K : never]: {
+  event: {
+    [K in keyof T as T[K] extends (ZapServerEvent<any> | ZapEvent<any, any>) ? K : never]: {
       send: (clientId: string, data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : T[K] extends ZapEvent<any, any> ? ReturnType<T[K]["process"]> : never)) => void;
-      broadcast: (data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : T[K] extends ZapEvent<any, any> ? ReturnType<T[K]["process"]> : never)) => void;
-    }
+    };
   };
-};
+}
 
 export type Context = {
-  server: ZapServerType<any>;
+  server: any;
   id: string;
   buffer: MiddlwareContext;
 }
@@ -21,11 +20,11 @@ export type Context = {
 export type MiddlwareContext = Record<string, any>;
 
 export type MiddlewareMetadata = {
-  id: string;               // Sender ID
-  ip: string;               // Client IP address
-  timestamp: number;        // Epoch time → when the msg was received
-  size: number;             // Size of the raw message in bytes
-  // protocol: "ws" | "wss";   // Whether it's WS or WSS (ignore for now)
+  id: string;                 // Sender ID
+  ip: string;                 // Client IP address
+  timestamp: number;          // Epoch time → when the msg was received
+  size: number;               // Size of the raw message in bytes
+  // protocol: "ws" | "wss";     // Whether it's WS or WSS (ignore for now)
 }
 
 export type MiddlwareMsg = {
@@ -40,16 +39,18 @@ export type MiddlewareType = (ctx: MiddlwareContext, msg: MiddlwareMsg) => boole
 
 export type EventInput = z.ZodTypeAny | undefined;
 
-export type ZapEvent<T extends EventInput, R = any> = T extends z.ZodTypeAny
+export type ZapEvent<T extends EventInput, R = any, E = unknown> = T extends z.ZodTypeAny
   ? {
     input: T;
     middleware?: MiddlewareType[];
     process: (input: z.infer<T>, ctx: Context) => R;
+    emitType?: E
   }
   : {
     input: z.ZodVoid;
     middleware?: MiddlewareType[];
     process: (ctx: Context) => R;
+    emitType?: E
   };
 
 export type ZapStream<T extends EventInput, R> = T extends z.ZodTypeAny

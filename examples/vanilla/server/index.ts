@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createZapServer, zapStream, zapEvent, zapServerEvent } from "@zap-socket/server";
+import { createZapServer, zapStream, zapEvent, zapServerEvent } from "../../../server/src/index";
 
 const events = {
   llm: zapStream({
@@ -16,11 +16,12 @@ const events = {
     }]
   }),
   add: zapEvent({
-    input: z.object({
-      num1: z.number(),
-      num2: z.number(),
-    }),
-    process: ({ num1, num2 }) => num1 + num2
+    input: z.string(),
+    process: (input, ctx) => {
+      const { server, id } = ctx;
+      return input.toUpperCase();
+    },
+    emitType: z.string()
   }),
   update: zapServerEvent({
     data: z.number()
@@ -35,3 +36,4 @@ server.onconnect((ctx) => {
   const { id } = ctx;
   console.log(`${id} joined the server`);
 });
+
