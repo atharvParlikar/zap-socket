@@ -9,10 +9,10 @@
   dependencies:
     csstype "^3.0.2"
 
-"@zap-socket/client@^0.0.11":
-  version "0.0.11"
-  resolved "https://registry.yarnpkg.com/@zap-socket/client/-/client-0.0.11.tgz#f7c11eb9c1dadeb636d0777b4831833d8a59b66f"
-  integrity sha512-ovFcjZCNVUBJ01hzAMFMh386y9iVdUR9Jm3sySmglIaXERaNbvUuh6vxb5Prwfg0X9Z/qCX9jaRpbkIPJqBajQ==
+"@zap-socket/client@^0.0.12":
+  version "0.0.12"
+  resolved "https://registry.yarnpkg.com/@zap-socket/client/-/client-0.0.12.tgz#f193dc1c15cd51c2deed3c699442c786c3788adf"
+  integrity sha512-tINnVCMZLMI+puFzBAFujTirAkcF8PlGzsjT4g/0jjIpXUK8xKQngN0BkII4jbcnmANj/zNsy8J0ERi8QlK0iQ==
   dependencies:
     "@zap-socket/types" "^0.0.3"
     zod "^3.24.2"
