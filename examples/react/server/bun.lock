@@ -4,7 +4,7 @@
     "": {
       "name": "server",
       "dependencies": {
-        "@zap-socket/server": "^0.0.6",
+        "@zap-socket/server": "^0.0.12",
         "zod": "^3.24.2",
       },
       "devDependencies": {
@@ -22,9 +22,9 @@
 
     "@types/ws": ["@types/ws@8.18.1", "", { "dependencies": { "@types/node": "*" } }, "sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg=="],
 
-    "@zap-socket/server": ["@zap-socket/server@0.0.6", "", { "dependencies": { "@zap-socket/types": "^0.0.3", "zod": "^3.24.2" } }, "sha512-wK2j5hDKnJYF8pBnC9BRFMAW3JnzxKh2GSDp0Om9NnQquaiaOwRwGx1SsuX92jrqVpeodOPPS9ZUA066LabZOQ=="],
+    "@zap-socket/server": ["@zap-socket/server@0.0.12", "", { "dependencies": { "@zap-socket/types": "^0.0.6", "zod": "^3.24.2" } }, "sha512-lW7gUEAChvU4gZqJsL8gvy/lL1kizL74JI284M/8HgEJ1eJl934JcpGWhCQdpP+3JMJdl7z2WF0AfEXISOEnZw=="],
 
-    "@zap-socket/types": ["@zap-socket/types@0.0.3", "", { "dependencies": { "zod": "^3.24.2" } }, "sha512-axDEH6wBzSgrPNPr4vUlyrBsULTYS66lfGzfq/fex3qULFccNAfP0rpSVSynlR0uRkufJIbol+qL4WHsevd/VQ=="],
+    "@zap-socket/types": ["@zap-socket/types@0.0.6", "", { "dependencies": { "zod": "^3.24.2" } }, "sha512-rQT6kebgM5mtg2IsoCjnXTLwv91N4SGA+x2fNS33T7xu27wsDRFLg16KXKOBII1aKWy7Vy7TnEc/WhWpDwraQA=="],
 
     "bun-types": ["bun-types@1.2.7", "", { "dependencies": { "@types/node": "*", "@types/ws": "*" } }, "sha512-P4hHhk7kjF99acXqKvltyuMQ2kf/rzIw3ylEDpCxDS9Xa0X0Yp/gJu/vDCucmWpiur5qJ0lwB2bWzOXa2GlHqA=="],
 

@@ -14,9 +14,9 @@ export const ZapContext = createContext<ZapContextType<any> | undefined>(undefin
 export type Events<T extends EventMap> = {
   [K in keyof T as T[K] extends ZapEvent<any, any> | ZapServerEvent<any> ? K : never]:
   T[K] extends ZapEvent<any, any> ?
-  () => ReturnType<T[K]["process"]> :
+  () => ReturnType<T[K]["process"]>[] :
   T[K] extends ZapServerEvent<any> ?
-  () => T[K]["data"] :
+  () => T[K]["data"][] :
   unknown;
 }
 
@@ -74,7 +74,8 @@ export function ZapProvider<T extends EventMap>({ children, url }: ZapProvierPro
 
   const syncedStateProxyHandler: ProxyHandler<Events<T>> = {
     get(target, prop, reciever) {
-      if (typeof prop === "string") return syncedState(prop);
+      console.log("prop: ", prop);
+      if (typeof prop === "string") return () => syncedState(prop);
     }
   }
 

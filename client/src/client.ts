@@ -242,15 +242,15 @@ export class ZapClient {
     });
   }
 
-  public sendMessage(event: string, data: any) {
-    console.log("sendMessage called");
-    const packet = {
-      event,
-      data
-    }
-
-    this.sendMessageRaw(packet);
-  }
+  // public sendMessage(event: string, data: any) {
+  //   console.log("sendMessage called");
+  //   const packet = {
+  //     event,
+  //     data
+  //   }
+  //
+  //   this.sendMessageRaw(packet);
+  // }
 
   public sendReq(event: string, data: any) {
     const requestId = generateId(REQ_ID_LEN);

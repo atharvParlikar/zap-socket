@@ -4,9 +4,10 @@ import { createZapServer, zapEvent, zapStream } from "@zap-socket/server";
 const events = {
   message: zapEvent({
     input: z.string(),
-    process: (data) => {
-      return data.toUpperCase();
-    }
+    process: (data, { server, id }) => {
+      server.selectiveBroascast("message", data, server.clients.filter(x => x !== id));
+    },
+    emitType: z.string()
   }),
   add: zapEvent({
     input: z.object({

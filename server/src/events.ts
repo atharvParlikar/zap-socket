@@ -27,13 +27,15 @@ export const zapEvent = <T extends EventInput, R, E>(
     return {
       input: eventObj.input,
       middleware: eventObj.middleware,
-      process: eventObj.process
+      process: eventObj.process,
+      emitType: eventObj.emitType
     } as ZapEvent<T, R>;
   }
   return {
     input: z.void(),
     middleware: eventObj.middleware,
-    process: eventObj.process as any
+    process: eventObj.process as any,
+    emitType: eventObj.emitType
   } as ZapEvent<T, R>;
 }
 
