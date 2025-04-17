@@ -2,28 +2,11 @@ import { useZap, ZapProvider } from "../../../react/src/index";
 import './App.css'
 import type { Events } from "../server/index";
 import { useEffect, useState } from "react";
+import { IncomingMessage } from "./components/IncomingMessage";
+import { OutgoingMessage } from "./components/OutgoingMessage";
 
-function IncomingMessage({ msg }: { msg: string }) {
-  return (
-    <div className="flex">
-      <div className="bg-gray-200 text-gray-800 p-3 rounded-lg max-w-[75%]">
-        {msg}
-      </div>
-    </div>
-  );
-}
 
-function OutgoingMessage({ msg }: { msg: string }) {
-  return (
-    <div className="flex justify-end">
-      <div className="bg-blue-500 text-white p-3 rounded-lg max-w-[75%]">
-        {msg}
-      </div>
-    </div>
-  );
-}
-
-function Test() {
+function Message() {
   const { zap, syncedState } = useZap<Events>();
   const incomingMessages = syncedState.message()
   const [messages, setMessages] = useState<{ msg: string, type: "incoming" | "outgoing" }[]>([]);
@@ -91,7 +74,7 @@ function App() {
   return (
     <ZapProvider url="ws://localhost:8000/">
       <div className="h-screen">
-        <Test />
+        <Message />
       </div>
     </ZapProvider>
   );
