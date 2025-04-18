@@ -45,4 +45,3 @@ server.onconnect((ctx) => {
   const { id } = ctx;
   console.log(`${id} joined the server`);
 });
-

@@ -31,11 +31,11 @@ import { z } from "zod";
 import { createZapServer, zapEvent } from "@zap-socket/server";
 
 const events = {
-  ping: {
+  ping: zapEvent({
     process: () => "pong"
-  },
+  }),
 
-  playerPosition: {
+  playerPosition: zapEvent({
     input: z.object({
       playerId: z.string()
     }),
@@ -43,16 +43,16 @@ const events = {
       // Fetch player position logic here
       return { x: 22, y: 24 };
     }
-  },
+  }),
 
-  signal: {
+  signal: zapEvent({
     input: z.string(),
     process: (signal, { server }) => {
       // Send signal to a specific client
       server.sendMessage("signal", signal, "some-client-id");
     },
     emitType: z.string()
-  }
+  })
 };
 
 const server = createZapServer<typeof events>({ port: 8080, events }, () => {
