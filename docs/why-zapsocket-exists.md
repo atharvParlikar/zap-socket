@@ -1,0 +1,9 @@
+Real-time communication is messy. WebSockets are powerful but low-level. [Socket.IO](http://socket.io/) made them accessible, but at the cost of bloated abstractions, awkward APIs, and poor TypeScript support. On the other end, tools like Firebase feel magical—until you want more control.
+
+ZapSocket exists because building real-time apps should feel clean, fast, and ergonomic without magic you can’t debug.
+
+This library started from a very real pain: managing WebRTC signaling between two peers. Sharing ICE candidates, validating JWTs, checking room states across Redis—it all felt harder than it should be. Listeners everywhere, scattered event handlers, too much boilerplate. I wanted a request-response pattern over WebSockets. Something structured, type-safe, and minimal.
+
+ZapSocket gives you that. With first-class TypeScript support, Zod validation, and powerful primitives like req, stream, and soon sub, it lets you build real-time apps that are not just functional—but joyful to work with.
+
+Whether you’re building a multiplayer game, a video interview tool, or a streaming LLM wrapper, ZapSocket gives you the primitives to control the chaos of real time—without losing your sanity.

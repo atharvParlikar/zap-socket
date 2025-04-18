@@ -5,9 +5,18 @@ const events = {
   message: zapEvent({
     input: z.string(),
     process: (data, { server, id }) => {
-      server.selectiveBroascast("message", data, server.clients.filter(x => x !== id));
+      server.selectiveBroascast(
+        "message",
+        {
+          msg: data,
+          type: "incoming"
+        },
+        server.clients.filter(x => x !== id));
     },
-    emitType: z.string()
+    emitType: z.object({
+      msg: z.string(),
+      type: z.string()
+    })
   })
 }
 

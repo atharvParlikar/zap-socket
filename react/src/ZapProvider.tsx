@@ -21,7 +21,7 @@ export type Events<T extends EventMap> = {
       ? undefined
       : ReturnType<T[K]["process"]>[])
     : NonNullable<T[K]["emitType"]> extends ZodType<any, any, any>
-    ? z.infer<NonNullable<T[K]["emitType"]>> : never
+    ? z.infer<NonNullable<T[K]["emitType"]>>[] : never
   )
   : T[K] extends ZapServerEvent<any>
   ? () => T[K]["data"][]
