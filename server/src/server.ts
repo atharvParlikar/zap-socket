@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { serialize, deserialize, generateId } from "./utils";
 import type { EventMap, MiddlewareMetadata, MiddlwareContext, MiddlwareMsg, ZapEvent, ZapServerEvent } from "@zap-socket/types";
+import { ZodType, z } from "zod";
 
 interface ZapServerConstructorT {
   port: number;
@@ -10,6 +11,17 @@ interface ZapServerConstructorT {
 const isClientEvent = (event: any): event is ZapEvent<any, any> => {
   return "process" in event; // both zapEvent and zapStream have process in them.
 }
+
+type ExtractSendData<T, K extends keyof T> =
+  T[K] extends ZapServerEvent<any>
+  ? T[K]['data']
+  : T[K] extends ZapEvent<any, any>
+  ? T[K]['emitType'] extends ZodType<any, any, any>
+  ? z.infer<T[K]['emitType']>
+  : ReturnType<T[K]['process']> extends undefined
+  ? undefined
+  : ReturnType<T[K]['process']>
+  : never;
 
 export class ZapServer<T extends EventMap> {
   public wss: WebSocketServer;
@@ -242,8 +254,11 @@ export class ZapServer<T extends EventMap> {
       })
     ) as {
         [K in keyof T as T[K] extends ZapServerEvent<any> | ZapEvent<any, any> ? K : never]: {
-          send: (clientId: string, data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : T[K] extends ZapEvent<any, any> ? ReturnType<T[K]["process"]> : never)) => void;
-          broadcast: (data?: (T[K] extends ZapServerEvent<any> ? T[K]["data"] : T[K] extends ZapEvent<any, any> ? ReturnType<T[K]["process"]> : never)) => void;
+          send: (
+            clientId: string,
+            data?: ExtractSendData<T, K>
+          ) => void;
+          broadcast: (data?: ExtractSendData<T, K>) => void;
         }
       }
   }
