@@ -1,11 +1,20 @@
 import { WebSocketServer, WebSocket } from "ws";
+import * as http from "http";
 import { serialize, deserialize, generateId } from "./utils";
 import type { EventMap, MiddlewareMetadata, MiddlwareContext, MiddlwareMsg, ZapEvent, ZapServerEvent } from "@zap-socket/types";
 import { ZodType, z } from "zod";
 
-interface ZapServerConstructorT {
+type CorsOptions = {
+  origin: string[];
+  methods: string[];
+  headers: string[];
+  credentials: boolean;
+}
+
+type ZapServerConstructorT = {
   port: number;
-  events?: EventMap
+  events?: EventMap;
+  cors: CorsOptions;
 }
 
 const isClientEvent = (event: any): event is ZapEvent<any, any> => {
@@ -23,7 +32,9 @@ type ExtractSendData<T, K extends keyof T> =
   : ReturnType<T[K]['process']>
   : never;
 
+
 export class ZapServer<T extends EventMap> {
+  public server: http.Server;
   public wss: WebSocketServer;
   public onconnect: (handler: (ctx: { id: string, ws: WebSocket }) => void) => void;
   private onconnectHandler: (ctx: { id: string, ws: WebSocket }) => void;
@@ -31,8 +42,35 @@ export class ZapServer<T extends EventMap> {
   private idToWs: Map<string, WebSocket>;
   private _events: T = {} as T;
 
-  constructor({ port, events = {} as T }: ZapServerConstructorT, callback?: () => void) {
-    this.wss = new WebSocketServer({ port });
+  constructor({ port, events = {} as T, cors }: ZapServerConstructorT, callback?: () => void) {
+    this.server = http.createServer((req, res) => {
+      const origin = req.headers.origin;
+
+      if (origin && cors.origin && (cors.origin.includes(origin) || cors.origin.includes("*"))) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+      }
+      if (cors.methods) {
+        res.setHeader("Access-Control-Allow-Methods", cors.methods.join(", "));
+      }
+      if (cors.headers) {
+        res.setHeader("Access-Control-Allow-Headers", cors.headers.join(", "));
+      }
+      if (cors.credentials !== undefined) {
+        res.setHeader("Access-Control-Allow-Credentials", cors.credentials ? "true" : "false");
+      }
+
+      // pre-flight response
+      if (req.method === "OPTIONS") {
+        res.writeHead(204);
+        res.end();
+        return;
+      }
+
+      res.writeHead(404);
+      res.end();
+    });
+
+    this.wss = new WebSocketServer({ server: this.server, port });
     this.wsToId = new Map();
     this.idToWs = new Map();
     this._events = events as T;
@@ -47,7 +85,8 @@ export class ZapServer<T extends EventMap> {
 
     this.wss.on("connection", (ws, req) => {
 
-      ws.on("message", (message) => {
+      ws.on("message", async (message) => {
+        // setting up socket id
         if (!this.wsToId.get(ws) && message.toString() === "OPEN") {
           const id = generateId();
           this.wsToId.set(ws, id);
@@ -116,6 +155,9 @@ export class ZapServer<T extends EventMap> {
             result = data.map((part: any) => process(part, context));
           } else {
             result = process(data, context);
+            if (result instanceof Promise) {
+              result = await result;
+            }
           }
 
           if (result === undefined) { // just ACK the request process returns nothing
@@ -272,7 +314,7 @@ export class ZapServer<T extends EventMap> {
   }
 }
 
-export const createZapServer = <T extends EventMap>({ port, events }: ZapServerConstructorT, callback?: () => void) => {
-  const server = new ZapServer<T>({ port, events }, callback);
+export const createZapServer = <T extends EventMap>({ port, events, cors }: ZapServerConstructorT, callback?: () => void) => {
+  const server = new ZapServer<T>({ port, events, cors }, callback);
   return server;
 }
