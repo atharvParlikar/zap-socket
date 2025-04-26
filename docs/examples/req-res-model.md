@@ -1,4 +1,4 @@
-# Request Response Model.
+# Request Response Model
 
 This example shows how to use zap-socket for a simple request-response pattern between a server and a client.
 
@@ -38,7 +38,7 @@ import { createZapClient } from "@zap-socket/client";
 const client = createZapClient<Events>({ url: "ws://localhost:8080" });
 
 async function run() {
-  const position = await client.events.getPosition("cosmicToast");
+  const position = await client.events.getPosition.send("cosmicToast");
   console.log("cosmicToast position: ", position);
 }
 
