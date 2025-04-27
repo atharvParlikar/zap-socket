@@ -18,8 +18,9 @@ const events = {
 
   signal: zapEvent({
     input: z.string(),
-    process: (signal, { server }) => {
+    process: (signal, ctx) => {
       // Send signal to a specific client
+      const { server } = ctx;
       server.sendMessage("signal", signal, "some-client-id");
     },
     emitType: z.string()
