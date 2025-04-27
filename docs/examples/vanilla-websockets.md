@@ -43,7 +43,7 @@ zapEvent({
 ```
 
 > **Tip**
-> Vanilla WebSocket events are great for things like notifications, live updates, or broadcasting actions where you don't expect a reply.
+> Vanilla WebSocket events are great for things like live updates or actions where you don't expect a reply.
 
 ---
 
