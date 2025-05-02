@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { createZapServer, zapEvent, zapStream } from "@zap-socket/server";
+import { createZapServer, zapEvent, zapServerEvent, zapStream } from "@zap-socket/server";
 
 const events = {
-  ping: zapEvent({
-    process: () => "pong"
+  ping: zapServerEvent({
+    data: z.string()
   }),
 
   playerPosition: zapEvent({
@@ -41,6 +41,10 @@ const events = {
 export type Events = typeof events;
 
 const server = createZapServer<Events>({ port: 8000, events });
+
+const client1 = server.clients[0];
+
+server.events.ping.send(client1, "ping");
 
 server.onconnect((ctx) => {
   const { id } = ctx;

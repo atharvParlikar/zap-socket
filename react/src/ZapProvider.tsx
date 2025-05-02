@@ -3,7 +3,7 @@ import { ZapEvent, ZapServerEvent, EventMap } from "@zap-socket/types";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { createContext } from "react";
 import { ZapContextType } from "./types";
-import { z, ZodType, ZodTypeAny } from "zod";
+import { z, ZodType } from "zod";
 
 interface ZapProvierProps {
   children: ReactNode;
