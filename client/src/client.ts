@@ -237,6 +237,8 @@ export class ZapClient {
             this._connected = true;
             resolve(null);
           }
+        } else if (event.data === "heartbeat") {
+          this.sendMessageRaw("heartbeat");
         }
       };
     });

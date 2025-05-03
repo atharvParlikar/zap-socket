@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createZapServer, zapEvent, zapServerEvent, zapStream } from "@zap-socket/server";
+import { createZapServer, zapEvent, zapServerEvent, zapStream } from "../../../server/src/index";
 
 const events = {
   ping: zapServerEvent({
@@ -40,13 +40,7 @@ const events = {
 
 export type Events = typeof events;
 
-const server = createZapServer<Events>({ port: 8000, events });
-
-const client1 = server.clients[0];
-
-server.events.ping.send(client1, "ping");
-
-server.onconnect((ctx) => {
-  const { id } = ctx;
-  console.log(`${id} joined the server`);
+const server = createZapServer<Events>({ port: 8000, events }, () => {
+  console.log("Server is online balle balle");
 });
+
