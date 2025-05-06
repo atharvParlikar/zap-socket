@@ -49,7 +49,14 @@ const events = {
 
 export type Events = typeof events;
 
-const server = createZapServer<Events>({ port: 8000, events }, () => {
+const server = createZapServer<Events>({
+  port: 8000, events, options: {
+    heartbeatPingFrequency: 1
+  }
+}, () => {
   console.log("Server is online balle balle");
 });
 
+server.onconnect(({ id }) => {
+  console.log(`${id} connected`);
+})

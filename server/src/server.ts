@@ -85,7 +85,7 @@ export class ZapServer<T extends EventMap> {
       this.onconnectHandler = handler;
     }
 
-    const seconds = Number(options?.heartbeatPingFrequency);
+    const seconds = options?.heartbeatPingFrequency ?? 5;
     const frequency = (Number.isFinite(seconds) && seconds > 0 ? seconds : 5) * 1000;
     setInterval(() => this.heartbeat(), frequency);
 
@@ -356,7 +356,7 @@ export class ZapServer<T extends EventMap> {
   }
 }
 
-export const createZapServer = <T extends EventMap>({ port, events, cors }: ZapServerConstructorT, callback?: () => void) => {
-  const server = new ZapServer<T>({ port, events, cors }, callback);
+export const createZapServer = <T extends EventMap>({ port, events, cors, options }: ZapServerConstructorT, callback?: () => void) => {
+  const server = new ZapServer<T>({ port, events, cors, options }, callback);
   return server;
 }
