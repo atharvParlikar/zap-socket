@@ -232,18 +232,18 @@
   resolved "https://registry.npmjs.org/@types/estree/-/estree-1.0.7.tgz"
   integrity sha512-w28IoSUCJpidD/TGviZwwMJckNESJZXFu7NBZ5YJ4mEUnNraUn9Pm8HSZm/jDF1pDWYKspWE7oVphigUPRakIQ==
 
-"@zap-socket/client@^0.0.12":
-  version "0.0.12"
-  resolved "https://registry.yarnpkg.com/@zap-socket/client/-/client-0.0.12.tgz#f193dc1c15cd51c2deed3c699442c786c3788adf"
-  integrity sha512-tINnVCMZLMI+puFzBAFujTirAkcF8PlGzsjT4g/0jjIpXUK8xKQngN0BkII4jbcnmANj/zNsy8J0ERi8QlK0iQ==
+"@zap-socket/client@^0.0.16":
+  version "0.0.16"
+  resolved "https://registry.yarnpkg.com/@zap-socket/client/-/client-0.0.16.tgz#dd3d6dfe26637ca100f5174adc08afaf67166ce8"
+  integrity sha512-+iiLuZPz9+s9gz0YrwbJRE3jAC6GAsyLjM8tT2+/cuna0MoDSAJwpBauksOeW673Am5R0z7ZdSFD3HTea9e5Cw==
   dependencies:
-    "@zap-socket/types" "^0.0.3"
+    "@zap-socket/types" "^0.0.8"
     zod "^3.24.2"
 
-"@zap-socket/types@^0.0.3":
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@zap-socket/types/-/types-0.0.3.tgz#114f200cba79cd8aaca2c4a2cc747d25d0685a90"
-  integrity sha512-axDEH6wBzSgrPNPr4vUlyrBsULTYS66lfGzfq/fex3qULFccNAfP0rpSVSynlR0uRkufJIbol+qL4WHsevd/VQ==
+"@zap-socket/types@^0.0.8":
+  version "0.0.8"
+  resolved "https://registry.yarnpkg.com/@zap-socket/types/-/types-0.0.8.tgz#59f6808b943b7597f2dc5af805ab3032f71fafe6"
+  integrity sha512-0yUcERTs0pLM/9Stfes8GD+yav4DtkfWQ//aMy4uX7zJKJOi+6aO64tz9V0gPKUPmzWI3evn4Vf4px9g3UCq5Q==
   dependencies:
     zod "^3.24.2"
 

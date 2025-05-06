@@ -17,6 +17,8 @@ import { generateId, serialize, safeJsonParse } from "./utils";
 //  -> listen (output autocomplete)
 //  -> unlisten
 
+const HEARTBEAT = 'heartbeat';
+
 interface CreateClientArgs {
   url: string;
   reconnect?: {
@@ -88,7 +90,7 @@ export class ZapClient {
   private _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private requestMap = new Map<string, { resolve: (value: unknown) => void, reject: (reason: any) => void }>();
   private listen: Map<string, (data: any) => void> = new Map();
-  public activeStreams: Map<string, AsyncQueue<any>> = new Map();
+  public _activeStreams: Map<string, AsyncQueue<any>> = new Map();
 
   constructor(url: string, reconnectOptions: CreateClientArgs["reconnect"] = {}) {
     this.ws = {} as WebSocket; // to slience the ts compiler
@@ -117,6 +119,14 @@ export class ZapClient {
 
       this.ws.onmessage = (e) => {
         const message: string = e.data.toString();
+
+        console.log(typeof message);
+        console.log(message.length);
+
+        if (message === HEARTBEAT) {
+          this.sendMessageRaw(HEARTBEAT);
+        }
+
         if (message.startsWith("ACK")) {
           const requestId = message.substring(4);
           const resolve = this.requestMap.get(requestId)?.resolve;
@@ -136,13 +146,13 @@ export class ZapClient {
           resolve(data);
           this.requestMap.delete(requestId);
         } else if (streamId) { // for streams
-          const messageQueue = this.activeStreams.get(streamId);
+          const messageQueue = this._activeStreams.get(streamId);
           if (!messageQueue) {
             //  TODO:  nice error message
             return;
           }
           if (done) {
-            this.activeStreams.delete(streamId);
+            this._activeStreams.delete(streamId);
             return;
           }
           messageQueue.push(fragment);
@@ -237,8 +247,6 @@ export class ZapClient {
             this._connected = true;
             resolve(null);
           }
-        } else if (event.data === "heartbeat") {
-          this.sendMessageRaw("heartbeat");
         }
       };
     });
@@ -304,7 +312,7 @@ export class ZapClient {
 
   public startStream(streamName: string, data: any) {
     const streamId = generateId(16);
-    this.activeStreams.set(streamId, new AsyncQueue());
+    this._activeStreams.set(streamId, new AsyncQueue());
     const packet = {
       stream: streamName,
       streamId,
@@ -418,7 +426,7 @@ export const createZapClient = <TEvents extends EventMap>({ url, reconnect }: Cr
             return {
               send: async function* (data: any) {
                 const streamId = client.startStream(streamName as string, data); //  TODO: investigate if streamName is not a string...
-                const messageQueue = client.activeStreams.get(streamId as string);
+                const messageQueue = client._activeStreams.get(streamId as string);
                 if (!messageQueue) return;
                 while (true) {
                   yield await messageQueue.pop();

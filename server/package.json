@@ -23,7 +23,7 @@
     "vitest": "^3.0.9"
   },
   "dependencies": {
-    "@zap-socket/types": "^0.0.7",
+    "@zap-socket/types": "^0.0.9",
     "zod": "^3.24.2"
   }
 }

@@ -33,7 +33,7 @@ export type MiddlwareMsg = {
   metadata: MiddlewareMetadata;
 }
 
-export type MiddlewareType = (ctx: MiddlwareContext, msg: MiddlwareMsg) => boolean;
+export type MiddlewareType = (ctx: MiddlwareContext, msg: MiddlwareMsg) => boolean | Promise<boolean>;
 
 // Middleware types end
 

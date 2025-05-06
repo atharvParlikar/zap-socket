@@ -1,12 +1,12 @@
-import { createZapClient } from "@zap-socket/client";
+import { createZapClient } from "../../../client/src/index";
 import { Events } from "../server/index";
 
 async function run() {
-  const position = await client.events.playerPosition.send({
-    playerId: "something"
-  });
+  client.events.uppercase.send("yo000");
 
-  console.log(position);
+  client.events.uppercase.listen((res) => {
+    console.log(res);
+  });
 }
 
 const client = createZapClient<Events>({ url: "ws://localhost:8000/" });

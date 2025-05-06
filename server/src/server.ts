@@ -1,5 +1,4 @@
 import { WebSocketServer, WebSocket } from "ws";
-import * as http from "http";
 import { serialize, deserialize, generateId } from "./utils";
 import type { EventMap, MiddlewareMetadata, MiddlwareContext, MiddlwareMsg, ZapEvent, ZapServerEvent } from "@zap-socket/types";
 import { ZodType, z } from "zod";
@@ -15,6 +14,9 @@ type ZapServerConstructorT = {
   port: number;
   events?: EventMap;
   cors?: CorsOptions;
+  options?: {
+    heartbeatPingFrequency: number
+  }
 }
 
 const isClientEvent = (event: any): event is ZapEvent<any, any> => {
@@ -43,7 +45,7 @@ export class ZapServer<T extends EventMap> {
   private _events: T = {} as T;
   private heartbeatMiss = new Map<string, number>();
 
-  constructor({ port, events = {} as T, cors }: ZapServerConstructorT, callback?: () => void) {
+  constructor({ port, events = {} as T, options }: ZapServerConstructorT, callback?: () => void) {
     // this.server = http.createServer((req, res) => {
     //
     //   if (cors) {
@@ -82,6 +84,10 @@ export class ZapServer<T extends EventMap> {
     this.onconnect = (handler) => {
       this.onconnectHandler = handler;
     }
+
+    const seconds = Number(options?.heartbeatPingFrequency);
+    const frequency = (Number.isFinite(seconds) && seconds > 0 ? seconds : 5) * 1000;
+    setInterval(() => this.heartbeat(), frequency);
 
     this.wss.on("listening", () => {
       if (callback) callback();
@@ -125,6 +131,19 @@ export class ZapServer<T extends EventMap> {
 
         if (!eventObj || !isClientEvent(eventObj)) return;
 
+        // Type validation.
+        const inputType = eventObj.input as z.ZodTypeAny;
+
+        const { success, error } = inputType.safeParse(data);
+
+        if (!success && error) {
+          // check if the message is of req-res
+          if (requestId) {
+
+          }
+          return;
+        }
+
         const { process, middleware } = eventObj;
 
         // Setup middleware context
@@ -144,7 +163,10 @@ export class ZapServer<T extends EventMap> {
               metadata,
             };
 
-            if (!m(ctx, msg)) return;
+            let shouldPass = m(ctx, msg);
+            shouldPass = shouldPass instanceof Promise ? await shouldPass : shouldPass;
+
+            if (!shouldPass) return;
           }
         }
 
@@ -155,10 +177,6 @@ export class ZapServer<T extends EventMap> {
           let result;
 
           if (batch) {
-            if (!data) {
-              ws.send("ACK " + requestId);
-              return;
-            }
             result = data.map((part: any) => process(part, context));
           } else {
             result = process(data, context);
@@ -196,8 +214,6 @@ export class ZapServer<T extends EventMap> {
         console.error(`WebSocket error for ${this.wsToId.get(ws)}:`, err);
       });
     });
-
-    setInterval(() => this.heartbeat(), 1000);
   }
 
   private removeClient(ws: WebSocket) {
@@ -213,7 +229,7 @@ export class ZapServer<T extends EventMap> {
       const misses = this.heartbeatMiss.get(id) ?? 0;
 
       if (misses > 2) {
-        ws.terminate();
+        if (ws) ws.close();
         this.idToWs.delete(id);
         this.heartbeatMiss.delete(id);
       } else {
