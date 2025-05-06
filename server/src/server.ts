@@ -268,6 +268,7 @@ export class ZapServer<T extends EventMap> {
 
   public broadcastRaw(data: any) {
     const serializedData = serialize(data);
+
     if (!serializedData) {
       //  TODO: throw a nice error
       return;

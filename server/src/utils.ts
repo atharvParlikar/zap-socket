@@ -15,6 +15,8 @@ export const safeJsonParse = (jsonString: string): Record<string, any> | null =>
 }
 
 export const serialize = <T>(data: T): string | null => {
+  if (typeof data === "string") return data as string;
+
   try {
     return JSON.stringify(data);
   } catch {
