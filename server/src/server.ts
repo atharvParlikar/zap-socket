@@ -1,4 +1,4 @@
-import { WebSocketServer, WebSocket } from "ws";
+import { WebSocketServer, WebSocket, RawData } from "ws";
 import { serialize, deserialize, generateId } from "./utils";
 import type { EventMap, MiddlewareMetadata, MiddlwareContext, MiddlwareMsg, ZapEvent, ZapServerEvent } from "@zap-socket/types";
 import { ZodType, z } from "zod";
@@ -43,6 +43,7 @@ export class ZapServer<T extends EventMap> {
   private wsToId: Map<WebSocket, string>;
   private idToWs: Map<string, WebSocket>;
   private _events: T = {} as T;
+  private messageBuffer: Map<WebSocket, RawData>;
   private heartbeatMiss = new Map<string, number>();
 
   constructor({ port, events = {} as T, options }: ZapServerConstructorT, callback?: () => void) {
@@ -80,6 +81,7 @@ export class ZapServer<T extends EventMap> {
     this.wsToId = new Map();
     this.idToWs = new Map();
     this._events = events as T;
+    this.messageBuffer = new Map();
     this.onconnectHandler = () => { };
     this.onconnect = (handler) => {
       this.onconnectHandler = handler;
@@ -106,7 +108,7 @@ export class ZapServer<T extends EventMap> {
           this.onconnectHandler({
             id,
             ws
-          })
+          });
           return;
         } else if (id && message.toString() === "heartbeat") {
           this.heartbeatMiss.set(id, 0);

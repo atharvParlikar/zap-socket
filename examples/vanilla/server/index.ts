@@ -44,6 +44,15 @@ const events = {
     process: (input) => {
       return input.toUpperCase();
     }
+  }),
+  someStream: zapStream({
+    input: z.void(),
+    middleware: [(ctx, msg) => {
+      return true
+    }],
+    process: async function* () {
+      yield "someshit"
+    }
   })
 }
 

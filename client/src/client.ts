@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z, ZodTypeAny } from "zod";
 import type { EventMap, ZapEvent, ZapServerEvent, ZapStream } from "@zap-socket/types";
 import { generateId, serialize, safeJsonParse } from "./utils";
 
@@ -381,14 +381,35 @@ type StreamHandler<TInput extends z.ZodTypeAny, TOutput> = {
 }
 
 export type ZapClientWithEvents<T extends EventMap> = ZapClient & {
+  // events: {
+  //   [K in keyof T as T[K] extends ZapEvent<any, any> | ZapServerEvent<any> ? K : never]:
+  //   T[K] extends ZapServerEvent<any>
+  //   ? ServerEventHandler<T[K]["data"]>
+  //   : (T[K] extends ZapEvent<any, any>
+  //     ? (T[K] extends ZapStream<any, any>
+  //       ? never
+  //       : EventHandler<T[K]["input"], ReturnType<T[K]["process"]>>)
+  //     : unknown)
+  // };
+
   events: {
-    [K in keyof T as T[K] extends ZapEvent<any, any> | ZapServerEvent<any> ? K : never]:
+    [K in keyof T as T[K] extends ZapStream<any, any> ? never : K]:
     T[K] extends ZapServerEvent<any>
     ? ServerEventHandler<T[K]["data"]>
-    : T[K] extends ZapEvent<any, any>
-    ? EventHandler<T[K]["input"], ReturnType<T[K]["process"]>>
-    : unknown;
-  };
+    : (
+      T[K] extends ZapEvent<any, any>
+      ? EventHandler<
+        T[K]["input"],
+        ReturnType<T[K]["process"]> extends void
+        ? (
+          T[K]["emitType"] extends ZodTypeAny
+          ? T[K]["emitType"] : undefined
+        )
+        : ReturnType<T[K]["process"]>>
+      : unknown
+    )
+  },
+
   streams: {
     [K in keyof T as T[K] extends ZapStream<any, any> ? K : never]: T[K] extends ZapStream<any, any> ? StreamHandler<T[K]["input"], ReturnType<T[K]["process"]>> : unknown;
   };
