@@ -38,34 +38,23 @@ import { createZapServer, zapEvent, zapServerEvent, zapStream } from "../../../s
 //   }),
 // };
 
+let msgNo = 0;
+
 const events = {
-  uppercase: zapEvent({
-    input: z.string().min(4),
-    process: (input) => {
-      return input.toUpperCase();
+  consume: zapEvent({
+    input: z.string(),
+    process: () => {
+      console.log("got a request, no", ++msgNo);
     }
   }),
-  someStream: zapStream({
-    input: z.void(),
-    middleware: [(ctx, msg) => {
-      return true
-    }],
-    process: async function* () {
-      yield "someshit"
-    }
-  })
 }
 
 export type Events = typeof events;
 
-const server = createZapServer<Events>({
-  port: 8000, events, options: {
-    heartbeatPingFrequency: 1
-  }
-}, () => {
+const server = createZapServer<Events>({ port: 8000, events }, () => {
   console.log("Server is online balle balle");
 });
 
 server.onconnect(({ id }) => {
   console.log(`${id} connected`);
-})
+});
