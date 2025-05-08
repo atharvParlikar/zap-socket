@@ -3,6 +3,7 @@ import { IncomingMessage } from "http";
 import { serialize, deserialize, generateId } from "./utils";
 import type { EventMap, MiddlewareMetadata, MiddlwareContext, MiddlwareMsg, ZapEvent, ZapServerEvent } from "@zap-socket/types";
 import { ZodType, z } from "zod";
+import { } from "uWebSockets.js";
 
 type CorsOptions = {
   origin: string[];
@@ -47,36 +48,6 @@ export class ZapServer<T extends EventMap> {
   private heartbeatMiss = new Map<string, number>();
 
   constructor({ port, events = {} as T, options }: ZapServerConstructorT, callback?: () => void) {
-    // this.server = http.createServer((req, res) => {
-    //
-    //   if (cors) {
-    //     const origin = req.headers.origin;
-    //
-    //     if (origin && cors.origin && (cors.origin.includes(origin) || cors.origin.includes("*"))) {
-    //       res.setHeader('Access-Control-Allow-Origin', origin);
-    //     }
-    //     if (cors.methods) {
-    //       res.setHeader("Access-Control-Allow-Methods", cors.methods.join(", "));
-    //     }
-    //     if (cors.headers) {
-    //       res.setHeader("Access-Control-Allow-Headers", cors.headers.join(", "));
-    //     }
-    //     if (cors.credentials !== undefined) {
-    //       res.setHeader("Access-Control-Allow-Credentials", cors.credentials ? "true" : "false");
-    //     }
-    //   }
-    //
-    //   // pre-flight response
-    //   if (req.method === "OPTIONS") {
-    //     res.writeHead(204);
-    //     res.end();
-    //     return;
-    //   }
-    //
-    //   res.writeHead(404);
-    //   res.end();
-    // });
-
     this.wss = new WebSocketServer({ port });
     this.wsToId = new Map();
     this.idToWs = new Map();

@@ -3,7 +3,8 @@
 Normally, clients send events to the server.  
 But sometimes the **server** needs to send a message **back to a client manually** — outside of a normal response flow.
 
-Here’s how to do it using `server.sendMessage`.
+Here’s how to do it using `server.sendMessage` and using `server` instance outside the events object.
+Doing this gives you better type safety and DX as the `server` is aware of `Events` type.
 
 ---
 
@@ -52,6 +53,8 @@ const server = createServer<Events>({
   port: 8080,
   events
 });
+
+server.events.message.send("some-client-id", "Hello from the server");
 ```
 
 ---
@@ -60,7 +63,7 @@ const server = createServer<Events>({
 
 - To send a custom server event, you must define it using `zapServerEvent`.  
   This way, you get **full type safety** and **autocompletion** on both the client and server sides.
-  
+
 - If you want to send events **outside** the `process` function (e.g., from a cron job or another server file),  
   having a `zapServerEvent` defined is **required** for good TypeScript support.
 
