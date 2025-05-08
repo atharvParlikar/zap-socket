@@ -1,1 +1,71 @@
-coming soon...
+# Events
+
+In `zap-socket`, an **event** is a named channel for communication between the client and server. Each message you send or receive is tagged with one of these event names.
+
+For example:
+
+1. `playerPosition` – handles position update messages
+2. `chatMessage` – handles chat messages
+
+> 💡 Think of it like Socket.IO's "event names" — same idea, just with stronger typing.
+
+Events are declared on the server in a simple object like this:
+
+```ts
+const events = {
+  ping: zapEvent({
+    process: () => "pong"
+  }),
+  playerPosition: zapEvent({
+    input: z.string(),
+    process: (playerId) => {
+      return { x: 2, y: 2 };
+    }
+  })
+}
+```
+
+## `zapEvent`
+
+The `zapEvent()` function is the core primitive for defining events. It powers both standard listeners (fire-and-forget) and request-response patterns.
+
+### Anatomy of `zapEvent`
+
+Here’s a simplified version of its input type:
+
+```ts
+type ZapEventInput = {
+  input?: T;
+  middleware?: MiddlewareType[];
+  process: (input: z.infer<T>, ctx: Context) => R;
+  emitType?: E;
+}
+```
+
+You define an event by passing an object with these fields:
+
+* `input` *(optional)*: A [Zod](https://zod.dev) schema specifying the expected shape of the incoming message. If the message doesn’t conform, it’s rejected with a typed error.
+* `middleware` *(optional)*: One or more middleware functions. See \[\[middleware]] for more.
+* `process`: The main function that runs every time this event is triggered. Takes validated `input` and a \[\[context]] object.
+* `emitType` *(optional)*: If your `process` function emits messages to clients, this defines the type of those outgoing messages for full type safety on the client.
+
+### `process()` function
+
+The `process` callback determines the behavior of the event — whether it behaves like a one-way listener or a request-response handler.
+
+If `process()` returns a value, `zap-socket` automatically treats it as a request-response event, and replies to the client with the return value. The return type is inferred and enforced on the client.
+
+**Parameters:**
+
+* `input`: The incoming message payload (validated by `input`, if not provided process would fire without a input parameter)
+* `ctx`: A context object passed with every event, containing useful metadata
+
+```ts
+type Context = {
+  server: ServerInstance; // Reference to the server
+  id: string;             // The sender's socket ID
+  buffer: Record<string, any>; // Shared data across middleware and handlers
+}
+```
+
+You can use `buffer` in `ctx` to store things like auth status, user metadata, database results — whatever your middleware attaches.
