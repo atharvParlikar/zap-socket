@@ -1,0 +1,33 @@
+## **⏳ timeline breakdown**
+
+#### **🟢 phase 1: core api & surface-level features**
+
+- [x] `createzapserver()` and `attachevents()`
+- [x] `zapevent.input().process()` api
+- [x] middleware support (with context)
+- [x] event broadcasting (rooms, namespaces later)
+- [x] client-side library for easy event sending
+- [x] react library for easy event sending
+- [x] stream
+- [x] syncedstate (react)
+- [x] auto-reconnection & exponential backoff
+- [x] heartbeat pings (prevent dead connections)
+- [x] backpressure handling for slow clients
+- [ ] cors headers
+- [ ] ssl for wss:// protocol
+
+#### **🟡 phase 2: stability & performance**
+
+- [ ] per-message compression (pmd)
+- [ ] binary support (`arraybuffer`)
+- [ ] transport fallback (sse)
+
+#### **🟠 phase 3: scaling**
+
+- [ ] redis-based multi-server sync
+- [ ] multiple horizontal scaling plug and play stretigies.
+
+#### **🟠 phase 4: language agnostic server**
+
+- [ ] go types to ts types transpiler so that client can still get trpc level autocomplete magic.
+- [ ] same for a bunch of langauges.

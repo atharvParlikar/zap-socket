@@ -1,3 +1,7 @@
+---
+title: Getting Started
+---
+
 # Server Setup
 
 ## Installation
@@ -7,8 +11,6 @@ First, install the server package:
 ```bash
 npm install @zap-socket/server
 ```
-
----
 
 ## Starting the WebSocket Server
 
@@ -22,7 +24,6 @@ const server = createZapServer({ port: 8080 }, () => {
 
 This sets up a basic zap-socket server. The event handlers are defined separately for cleaner organization.
 
----
 
 ## Defining Events
 
@@ -44,15 +45,6 @@ const events = {
       return { x: 22, y: 24 };
     }
   }),
-
-  signal: zapEvent({
-    input: z.string(),
-    process: (signal, { server }) => {
-      // Send signal to a specific client
-      server.sendMessage("signal", signal, "some-client-id");
-    },
-    emitType: z.string()
-  })
 };
 
 const server = createZapServer<typeof events>({ port: 8080, events }, () => {
@@ -66,9 +58,64 @@ The `events` object is where you define all your WebSocket events. Each key repr
 
 `zapEvent` is a versatile building block. It supports both **request-response** style communication and **fire-and-forget** events (like emitting signals to clients). This duality allows you to keep your real-time logic concise and easy to manage.
 
-📖 Learn more about `zapEvent` [[here]].
+📖 Learn more about `zapEvent` [here](/core-concepts/events).
 
 ### Registering Events
 
 To register your events with the server, simply pass the `events` object to `createZapServer`. This enables the server to handle incoming messages based on the event definitions you've provided—handling input validation, message routing, and type-safe responses automatically.
 
+---
+
+# Client Setup
+
+## Installation
+
+Install the client package:
+
+```bash
+npm install @zap-socket/client
+```
+
+
+## Connecting to the WebSocket Server
+
+To connect to the server and send messages, use `createZapClient`:
+
+```ts
+import { createZapClient } from "@zap-socket/client";
+import { Events } from "../server/index";
+
+const url = "ws://localhost:8080/";
+const client = createZapClient<Events>({ url });
+
+client.onconnect = () => {
+  run();
+};
+
+async function run() {
+  // Send a message and wait for the server's response
+  const response = await client.events.message.send("hi");
+  console.log(response);
+
+  // Fire-and-forget (no response expected)
+  client.events.message.send("hii");
+}
+```
+
+The client automatically reconnects if the connection is lost, and `onconnect` is called every time it successfully connects.
+
+
+## Sending Events
+
+Each event defined on the server is exposed as a method on `client.events`.
+
+* Use `send(...)` to trigger a request-response interaction.
+* You can also use `send(...)` without awaiting for fire-and-forget communication.
+
+---
+
+# Next Steps
+
+* Learn about [zapEvents](/core-concepts/events) deeply
+* Set up [authentication and context](/core-concepts/middleware#authentication)
+* Explore [client-side subscriptions](/core-concepts/subscriptions)
