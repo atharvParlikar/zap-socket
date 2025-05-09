@@ -1,4 +1,4 @@
-# zap-socket ⚡🧠📡
+# zap-socket ⚡
 
 **Control the chaos of realtime.**
 
