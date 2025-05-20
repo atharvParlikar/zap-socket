@@ -120,9 +120,6 @@ export class ZapClient {
       this.ws.onmessage = (e) => {
         const message: string = e.data.toString();
 
-        console.log(typeof message);
-        console.log(message.length);
-
         if (message === HEARTBEAT) {
           this.sendMessageRaw(HEARTBEAT);
         }
@@ -251,16 +248,6 @@ export class ZapClient {
       };
     });
   }
-
-  // public sendMessage(event: string, data: any) {
-  //   console.log("sendMessage called");
-  //   const packet = {
-  //     event,
-  //     data
-  //   }
-  //
-  //   this.sendMessageRaw(packet);
-  // }
 
   public sendReq(event: string, data: any) {
     const requestId = generateId(REQ_ID_LEN);

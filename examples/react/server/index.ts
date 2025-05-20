@@ -17,6 +17,10 @@ const events = {
       msg: z.string(),
       type: z.string()
     })
+  }),
+  ping: zapEvent({
+    input: z.string(),
+    process: (input) => "pong " + input
   })
 }
 

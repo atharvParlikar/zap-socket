@@ -1,6 +1,6 @@
 {
   "name": "@zap-socket/react",
-  "version": "0.0.5",
+  "version": "0.0.9",
   "description": "React hooks for zap-socket",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,7 +15,7 @@
   ],
   "dependencies": {
     "@types/react": "^19.1.0",
-    "@zap-socket/client": "^0.0.15",
+    "@zap-socket/client": "^0.0.20",
     "zod": "^3.24.2"
   },
   "devDependencies": {

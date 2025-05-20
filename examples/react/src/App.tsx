@@ -1,21 +1,21 @@
-import { useZap, ZapProvider } from "../../../react/src/index";
+import { useZap, ZapProvider } from "../../../react/dist";
 import './App.css'
 import type { Events } from "../server/index";
 import { useEffect, useState } from "react";
 import { Chat } from "./components/Chat";
 
 function Example() {
-  const { syncedState } = useZap<Events>();
+  const { syncedState, zap } = useZap<Events>();
   const incomingMessages = syncedState.message()
   const [messages, setMessages] = useState<{ msg: string, type: "incoming" | "outgoing" }[]>([]);
 
   useEffect(() => {
     const lastMessage = incomingMessages.slice(-1)[0];
     if (lastMessage) {
-      setMessages(x => [...x, {
-        msg: lastMessage,
-        type: "incoming"
-      }]);
+      // setMessages(x => [...x, {
+      //   msg: lastMessage,
+      //   type: "incoming"
+      // }]);
     }
   }, [incomingMessages]);
 
