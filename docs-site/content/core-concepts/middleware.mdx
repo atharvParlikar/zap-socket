@@ -1,1 +1,107 @@
-coming soon...
+# Middleware
+
+Middleware in `zap-socket` works similarly to systems like tRPC. Each middleware function decides whether an incoming message should be processed. It also receives a `context` object you can populate and use later in the `process` step.
+
+> ⚠️ **Note**: Middleware should **not** be used for input validation. Input is validated automatically via the `input` field in the `zapEvent` object.
+
+---
+
+## API
+
+```ts
+zapEvent({
+  input: ...,         // Zod schema for validation
+  middleware: [...],  // Array of middleware functions
+  process: ...        // The main handler function
+});
+```
+
+Middleware is just an array of functions. Each must return `true` (allow message) or `false` (block message). All must return `true` for the message to reach `process()`.
+
+Supports both sync and async functions.
+
+---
+
+### Execution Flow
+
+Middleware executes in order:
+
+```txt
+middleware[0] → ✅
+middleware[1] → ✅
+...
+→ `process()` is called only if all pass.
+```
+
+---
+
+## Example
+
+```ts
+const events = {
+  privateAction: zapEvent({
+    input: z.object({ data: z.string() }),
+    middleware: [
+      logger,
+      auth,
+      rateLimiter({ limit: 10, windowMs: 30000 }) // Factory — don't call it directly!
+    ],
+    process: ({ input }) => `Secure data: ${input.data}`
+  })
+};
+```
+
+---
+
+## Middleware Signature
+
+```ts
+type MiddlewareType = (
+  ctx: MiddlewareContext,
+  msg: MiddlewareMsg
+) => boolean | Promise<boolean>;
+
+type MiddlewareContext = Record<string, any>;
+
+type MiddlewareMsg = {
+  event: string;
+  data: any;
+  metadata: MiddlewareMetadata;
+};
+
+type MiddlewareMetadata = {
+  id: string;
+  ip: string;
+  timestamp: number;
+  size: number;
+};
+```
+
+---
+
+## Using Context
+
+You can modify the `context` inside a middleware to pass data to the `process()` step:
+
+```ts
+const events = {
+  someEvent: zapEvent({
+    input: z.string(),
+    middleware: [
+      async (ctx, { metadata }) => {
+        const { ip } = metadata;
+        const res = await fetch(`http://localhost:8000/getLocation?ip=${ip}`);
+        const data = await res.json();
+
+        ctx.location = data.location;
+        return true;
+      }
+    ],
+    process: ({ input }, ctx) => {
+      console.log("User location:", ctx.location);
+    }
+  })
+};
+```
+
+> 🧠 **Tip**: Think of `ctx` as a shared memory space that middleware and `process()` can both access.

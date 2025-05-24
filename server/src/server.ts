@@ -3,7 +3,6 @@ import { IncomingMessage } from "http";
 import { serialize, deserialize, generateId } from "./utils";
 import type { EventMap, MiddlewareMetadata, MiddlwareContext, MiddlwareMsg, ZapEvent, ZapServerEvent } from "@zap-socket/types";
 import { ZodType, z } from "zod";
-import { } from "uWebSockets.js";
 
 type CorsOptions = {
   origin: string[];
@@ -37,6 +36,11 @@ type ExtractSendData<T, K extends keyof T> =
   : never;
 
 
+// make the server class abstracted away
+// or atleast the ws interactions
+// so that we can change the backends
+// with ease (ws & uWebSocket).
+
 export class ZapServer<T extends EventMap> {
   // public server: http.Server;
   public wss: WebSocketServer;
@@ -44,6 +48,7 @@ export class ZapServer<T extends EventMap> {
   private onconnectHandler: (ctx: { id: string, ws: WebSocket }) => void;
   private wsToId: Map<WebSocket, string>;
   private idToWs: Map<string, WebSocket>;
+  private persistantContext: Map<string, Record<any, any>>;
   private _events: T = {} as T;
   private heartbeatMiss = new Map<string, number>();
 
@@ -51,6 +56,7 @@ export class ZapServer<T extends EventMap> {
     this.wss = new WebSocketServer({ port });
     this.wsToId = new Map();
     this.idToWs = new Map();
+    this.persistantContext = new Map();
     this._events = events as T;
     this.onconnectHandler = () => { };
     this.onconnect = (handler) => {
@@ -156,8 +162,14 @@ export class ZapServer<T extends EventMap> {
 
     const { process, middleware } = eventObj;
 
-    // Setup middleware context
-    const ctx: MiddlwareContext = {};
+    if (!id) {
+      ws.close();
+      return;
+    }
+
+    const buffer = this.persistantContext.get(id);
+    const ctx: MiddlwareContext = { buffer };
+
     if (middleware) {
       for (const m of middleware) {
         const metadata: MiddlewareMetadata = {
