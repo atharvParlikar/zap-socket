@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { EventInput, ZapEvent, ZapStream, ZapServerEvent, MiddlewareType, MiddlwareContext } from "@zap-socket/types";
-import { ZapServer } from "./server";
+import { ZapServer } from "./server.js";
 
 export type Context = {
   server: ZapServer<any>;

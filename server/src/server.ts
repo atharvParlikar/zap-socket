@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket, RawData } from "ws";
 import { IncomingMessage } from "http";
-import { serialize, deserialize, generateId } from "./utils";
+import { serialize, deserialize, generateId } from "./utils.js";
 import type { EventMap, MiddlewareMetadata, MiddlwareContext, MiddlwareMsg, ZapEvent, ZapServerEvent } from "@zap-socket/types";
 import { ZodType, z } from "zod";
 
