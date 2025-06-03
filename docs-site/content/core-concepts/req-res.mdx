@@ -1,1 +1,52 @@
-coming soon...
+---
+title: Request-Response Model in Zap Socket
+---
+
+# Request-Response Model
+
+The request-response model in `zap-socket` works just like you'd expect. You send a request, you get a response, the only difference is that it's all happening over WebSockets instead of HTTP.
+
+This makes it ideal for real-time applications where maintaining a persistent connection is beneficial.
+
+## How It Works
+
+To create a request-response event, use the `zapEvent` function. When your event's `process` handler returns something, the event automatically supports the request-response model.
+
+### Example
+
+#### Server
+
+```ts
+import { zapEvent } from '@zap-socket/server';
+import { z } from 'zod';
+
+const events = {
+  someEvent: zapEvent({
+    input: z.string(),
+    process: (input) => {
+      // Perform logic and return a response
+      return "response from server";
+    },
+  }),
+};
+```
+
+Because the `process` function returns a value, the `someEvent` becomes a request-response event automatically.
+
+#### Client
+
+```ts
+import { createZapClient } from '@zap-socket/client';
+
+const zap = createZapClient<typeof events>("ws://your-server-url");
+
+const response = await zap.events.someEvent.send("your-input");
+
+console.log(response); // "response from server"
+```
+
+No need to set up listeners. Just `await` the result and you're done.
+
+## Learn More
+
+To dive deeper into how `zapEvent` works under the hood, check out the [zapEvent documentation](./streams).

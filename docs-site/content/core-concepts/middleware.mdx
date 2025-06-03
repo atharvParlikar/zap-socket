@@ -51,6 +51,8 @@ const events = {
 };
 ```
 
+> ⚠️ **Note**: You shouldn't authenticate every single incoming message, you only have to do it once as ws is stateful, the context buffer is persistant throughout the connection.
+
 ---
 
 ## Middleware Signature
