@@ -4,7 +4,7 @@ import { IncomingMessage } from "./IncomingMessage";
 import { OutgoingMessage } from "./OutgoingMessage";
 import { useState } from "react";
 
-type Message = {
+export type Message = {
   msg: string;
   type: "incoming" | "outgoing";
 };
