@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createZapServer, zapEvent, } from "@zap-socket/server";
+import { createZapServer, zapEvent, } from "../../../server/src/index";
 
 const port = 8080;
 
@@ -21,4 +21,5 @@ const server = createZapServer<Events>({ port, events }, () => {
 
 server.onconnect(({ id }) => {
   console.log(`${id} connected`);
+  server.events.message.broadcast("sup niggas");
 });
