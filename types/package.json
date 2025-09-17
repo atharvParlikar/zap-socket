@@ -1,6 +1,6 @@
 {
   "name": "@zap-socket/types",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "types for @zap-socket/server and @zap-socket/client",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -21,6 +21,6 @@
     "typescript": "^5.8.2"
   },
   "dependencies": {
-    "zod": "^4.0.17"
+    "zod": "^4.1.9"
   }
 }
